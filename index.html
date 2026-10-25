@@ -37,6 +37,8 @@
       padding: var(--pad-top) max(12px, env(safe-area-inset-right)) var(--pad-bottom) max(12px, env(safe-area-inset-left));
     }
 
+    input { user-select: text; -webkit-user-select: text; }
+
     .custom-scrollbar::-webkit-scrollbar {
       width: 5px;
     }
@@ -124,8 +126,14 @@
   <!-- ==================== 1. SETUP / RECIPE SCREEN ==================== -->
   <div id="setupScreen" class="screen-view visible-view flex-col justify-between">
     <div class="flex flex-col gap-3">
-      <div class="text-center pt-1">
+      <div class="relative text-center pt-1">
         <h1 class="text-2xl font-extrabold tracking-tight text-white drop-shadow">Coffee Brewing Guide</h1>
+        <button onclick="openSettings()" class="mt-0.5 text-[10px] font-bold text-slate-400 hover:text-bronze transition-colors">
+          Grinder: <span id="grinderChipName" class="text-slate-200">Fellow Ode Gen 2</span> · <span class="underline underline-offset-2">change</span>
+        </button>
+        <button onclick="openSettings()" class="absolute right-0 top-0.5 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-white active:scale-95 transition-all" title="Settings" aria-label="Settings">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        </button>
       </div>
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-3">
@@ -148,21 +156,27 @@
         </div>
 
         <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">BREW SIZE</span>
-          <div role="group" aria-label="Brew size" class="grid grid-cols-2 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-xs font-bold gap-1">
-            <button id="btn1Cup" onclick="setCupSize(1)" aria-label="1 cup (250g)" class="py-2 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button flex items-center justify-center active:scale-95">
-              <svg class="w-5 h-5 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-            </button>
-            <button id="btn2Cup" onclick="setCupSize(2)" aria-label="2 cups (500g)" class="py-2 rounded-lg transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1 active:scale-95">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-            </button>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">DOSE &amp; RATIO</span>
+            <span id="waterReadout" class="text-[10px] font-bold text-slate-300">💧 250g water</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div role="group" aria-label="Coffee dose" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
+              <button id="btnDoseDown" onclick="changeDose(-1)" aria-label="Less coffee" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
+              <div class="text-center leading-tight">
+                <span id="doseValue" class="block text-sm font-extrabold text-white font-mono" aria-live="polite">15g</span>
+                <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Coffee</span>
+              </div>
+              <button id="btnDoseUp" onclick="changeDose(1)" aria-label="More coffee" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
+            </div>
+            <div role="group" aria-label="Brew ratio" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
+              <button id="btnRatioDown" onclick="changeRatio(-1)" aria-label="Stronger ratio" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
+              <div class="text-center leading-tight">
+                <span id="ratioValue" class="block text-sm font-extrabold text-white font-mono" aria-live="polite">1:16.7</span>
+                <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Ratio</span>
+              </div>
+              <button id="btnRatioUp" onclick="changeRatio(1)" aria-label="Weaker ratio" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
+            </div>
           </div>
         </div>
 
@@ -189,6 +203,50 @@
     </div>
 
     <div class="text-center text-[10px] text-slate-500 pb-1">Select a profile above to continue</div>
+  </div>
+
+  <!-- ==================== 1.5. SETTINGS SCREEN ==================== -->
+  <div id="settingsScreen" class="screen-view hidden-view flex-col justify-between">
+    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-0.5">
+      <div class="text-center pt-1">
+        <h2 class="text-xl font-extrabold text-white drop-shadow">Settings</h2>
+      </div>
+
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">GRINDER</span>
+        <div id="grinderOptions" role="group" aria-label="Grinder" class="grid grid-cols-2 gap-1.5 text-[11px] font-bold"></div>
+        <p class="text-[10px] text-slate-400 leading-relaxed mt-1">Recipes are written for the Fellow Ode Gen 2. Other grinders get converted settings, which are approximate starting points: adjust to taste, then use the drawdown advice after each brew.</p>
+      </div>
+
+      <div id="customGrinderPanel" class="hidden bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">CUSTOM GRINDER</span>
+        <label class="text-[10px] font-bold text-slate-300">Name
+          <input id="customName" type="text" maxlength="40" placeholder="My grinder" oninput="saveCustomGrinder()" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white font-mono focus:outline-none focus:border-bronze">
+        </label>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="text-[10px] font-bold text-slate-300">Finest
+            <input id="customFinest" type="number" inputmode="decimal" step="any" oninput="saveCustomGrinder()" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white font-mono focus:outline-none focus:border-bronze">
+          </label>
+          <label class="text-[10px] font-bold text-slate-300">Coarsest
+            <input id="customCoarsest" type="number" inputmode="decimal" step="any" oninput="saveCustomGrinder()" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white font-mono focus:outline-none focus:border-bronze">
+          </label>
+          <label class="text-[10px] font-bold text-slate-300">Step
+            <input id="customStep" type="number" inputmode="decimal" step="any" min="0" oninput="saveCustomGrinder()" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white font-mono focus:outline-none focus:border-bronze">
+          </label>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-relaxed">Enter the finest and coarsest settings on your grinder's dial, and the size of one click or step (e.g. 1, or 0.1). Every recipe is scaled across that range.</p>
+        <p id="customGrinderError" class="hidden text-[11px] font-bold text-rose-400"></p>
+      </div>
+
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
+        <span id="grinderPreviewTitle" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">PREVIEW</span>
+        <div id="grinderPreview" class="flex flex-col gap-1 text-[11px]"></div>
+      </div>
+    </div>
+
+    <button onclick="closeSettings()" class="w-full mt-3 bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 rounded-2xl text-sm shadow-depth-button active:scale-[0.98] transition-all">
+      Done
+    </button>
   </div>
 
   <!-- ==================== 2. SELF-PACED PREPARE SCREEN ==================== -->
@@ -220,7 +278,7 @@
           <div class="w-4 h-4 rounded-full bg-bronze/25 text-bronze flex items-center justify-center text-[10px] font-black shrink-0 shadow-sm">3</div>
           <div>
             <span class="text-[11px] font-bold text-white block">Grind Coffee</span>
-            <p id="prepInstructionGrind" class="text-[10px] text-slate-300 mt-0.5">Grind on Fellow Ode Gen 2.</p>
+            <p id="prepInstructionGrind" class="text-[10px] text-slate-300 mt-0.5">Grind to the recipe setting.</p>
           </div>
         </div>
 
@@ -485,6 +543,7 @@
     });
   }
 
+  // `ode` is each coffee's base grind on the Fellow Ode Gen 2 dial (V60, 250 g). Other grinders are converted from it.
   const coffeeData = {
     light_high: { category: "standard", name: "Light Roast / High Elevation", temp: "96°C", notes: "Bright jasmine florals, sparkling citrus acidity, and clean tea-like sweetness.", ode: 5.1 },
     medium_light: { category: "standard", name: "Medium / Light Roast", temp: "93°C", notes: "Vibrant stone fruit, red berry notes, and refined cane sugar sweetness.", ode: 5.2 },
@@ -514,78 +573,171 @@
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function generateSteps(method, cups) {
-    if (method === 'v60') {
-      if (cups === 1) {
-        return [
-          { phaseName: "Active Pour", time: 12, pourTime: 12, water: 50, flow: "4.2 g/s", desc: "Pour water gently in spirals to 50g at around 4.2 g/s.", phase: "pour", label: "Bloom Pour", valve: null },
-          { phaseName: "Bloom Rest", time: 33, pourTime: 0, water: 50, flow: "Resting", desc: "Allow coffee bed to bloom and release CO2 gases.", phase: "bloom", label: "Bloom Rest", valve: null },
-          { phaseName: "Active Pour", time: 20, pourTime: 20, water: 150, flow: "5.0 g/s", desc: "Pour in smooth concentric spirals to target weight of 150g at around 5.0 g/s.", phase: "pour", label: "First Main Pour", valve: null },
-          { phaseName: "Wait", time: 25, pourTime: 0, water: 150, flow: "Resting", desc: "Allow water level to drop gently into coffee bed.", phase: "bloom", label: "Bed Settle", valve: null },
-          { phaseName: "Active Pour", time: 20, pourTime: 20, water: 250, flow: "5.0 g/s", desc: "Pour smoothly to final target weight of 250g at around 5.0 g/s, then give one gentle swirl.", phase: "pour", label: "Final Pour", valve: null },
-          { phaseName: "Final Drawdown", time: 70, pourTime: 0, water: 250, flow: "Drain", desc: "Allow coffee to drain fully through paper filter.", phase: "drawdown", label: "Drawdown", valve: null }
-        ];
-      } else {
-        return [
-          { phaseName: "Active Pour", time: 15, pourTime: 15, water: 100, flow: "6.7 g/s", desc: "Pour water gently in spirals to 100g at around 6.7 g/s.", phase: "pour", label: "Bloom Pour", valve: null },
-          { phaseName: "Bloom Rest", time: 30, pourTime: 0, water: 100, flow: "Resting", desc: "Allow coffee bed to bloom and release CO2 gases.", phase: "bloom", label: "Bloom Rest", valve: null },
-          { phaseName: "Active Pour", time: 30, pourTime: 30, water: 300, flow: "6.7 g/s", desc: "Pour in smooth concentric spirals to target weight of 300g at around 6.7 g/s.", phase: "pour", label: "First Main Pour", valve: null },
-          { phaseName: "Wait", time: 20, pourTime: 0, water: 300, flow: "Resting", desc: "Allow water level to drop gently before final fill.", phase: "bloom", label: "Bed Settle", valve: null },
-          { phaseName: "Active Pour", time: 29, pourTime: 29, water: 500, flow: "6.9 g/s", desc: "Pour smoothly to final target weight of 500g at around 6.9 g/s, then give one gentle swirl.", phase: "pour", label: "Final Pour", valve: null },
-          { phaseName: "Final Drawdown", time: 86, pourTime: 0, water: 500, flow: "Drain", desc: "Allow full batch to drain through filter.", phase: "drawdown", label: "Drawdown", valve: null }
-        ];
-      }
-    } else if (method === 'switch_hybrid') {
-      if (cups === 1) {
-        return [
-          { phaseName: "Active Pour", time: 12, pourTime: 12, water: 50, flow: "4.2 g/s", desc: "Pour bloom water with valve open to 50g at around 4.2 g/s.", phase: "pour", label: "Open Bloom", valve: "open" },
-          { phaseName: "Bloom Rest", time: 33, pourTime: 0, water: 50, flow: "Resting", desc: "Allow grounds to bloom with valve open.", phase: "bloom", label: "Bloom Rest", valve: "open" },
-          { phaseName: "Active Pour", time: 20, pourTime: 20, water: 250, flow: "10.0 g/s", desc: "Close valve, then pour smoothly to target weight of 250g at around 10.0 g/s.", phase: "pour", label: "Steep Pour", valve: "closed" },
-          { phaseName: "Immersion Steep", time: 70, pourTime: 0, water: 250, flow: "Steeping", desc: "Allow water to steep undisturbed with valve closed.", phase: "steep", label: "Steep", valve: "closed" },
-          { phaseName: "Final Drawdown", time: 45, pourTime: 0, water: 250, flow: "Drain", desc: "Open valve to allow coffee to drain into server.", phase: "drawdown", label: "Valve Release", valve: "open" }
-        ];
-      } else {
-        return [
-          { phaseName: "Active Pour", time: 15, pourTime: 15, water: 100, flow: "6.7 g/s", desc: "Pour bloom water with valve open to 100g at around 6.7 g/s.", phase: "pour", label: "Open Bloom", valve: "open" },
-          { phaseName: "Bloom Rest", time: 30, pourTime: 0, water: 100, flow: "Resting", desc: "Allow grounds to bloom with valve open.", phase: "bloom", label: "Bloom Rest", valve: "open" },
-          { phaseName: "Active Pour", time: 30, pourTime: 30, water: 500, flow: "13.3 g/s", desc: "Close valve, then pour smoothly to target weight of 500g at around 13.3 g/s.", phase: "pour", label: "Steep Pour", valve: "closed" },
-          { phaseName: "Immersion Steep", time: 90, pourTime: 0, water: 500, flow: "Steeping", desc: "Allow water to steep undisturbed with valve closed.", phase: "steep", label: "Steep", valve: "closed" },
-          { phaseName: "Final Drawdown", time: 60, pourTime: 0, water: 500, flow: "Drain", desc: "Open valve to allow coffee to drain into server.", phase: "drawdown", label: "Valve Release", valve: "open" }
-        ];
-      }
-    } else if (method === 'switch_immersion') {
-      if (cups === 1) {
-        return [
-          { phaseName: "Active Pour", time: 25, pourTime: 25, water: 250, flow: "10.0 g/s", desc: "Pour all water with valve closed to target weight of 250g at around 10.0 g/s.", phase: "pour", label: "Steep Pour", valve: "closed" },
-          { phaseName: "Wait", time: 5, pourTime: 0, water: 250, flow: "Resting", desc: "Allow coffee bed to settle.", phase: "bloom", label: "Bed Settle", valve: "closed" },
-          { phaseName: "Immersion Steep", time: 120, pourTime: 0, water: 250, flow: "Steeping", desc: "Allow coffee to steep with valve closed.", phase: "steep", label: "Steep", valve: "closed" },
-          { phaseName: "Final Drawdown", time: 60, pourTime: 0, water: 250, flow: "Drain", desc: "Open valve to allow coffee to drain into server.", phase: "drawdown", label: "Valve Release", valve: "open" }
-        ];
-      } else {
-        return [
-          { phaseName: "Active Pour", time: 35, pourTime: 35, water: 500, flow: "20.0 g/s", desc: "Pour all water with valve closed to target weight of 500g at around 20.0 g/s.", phase: "pour", label: "Steep Pour", valve: "closed" },
-          { phaseName: "Wait", time: 5, pourTime: 0, water: 500, flow: "Resting", desc: "Allow coffee bed to settle.", phase: "bloom", label: "Bed Settle", valve: "closed" },
-          { phaseName: "Immersion Steep", time: 120, pourTime: 0, water: 500, flow: "Steeping", desc: "Allow coffee to steep with valve closed.", phase: "steep", label: "Steep", valve: "closed" },
-          { phaseName: "Final Drawdown", time: 90, pourTime: 0, water: 500, flow: "Drain", desc: "Open valve to allow coffee to drain into server.", phase: "drawdown", label: "Valve Release", valve: "open" }
-        ];
-      }
-    } else {
-      if (cups === 1) {
-        return [
-          { phaseName: "Active Pour", time: 25, pourTime: 25, water: 250, flow: "10.0 g/s", desc: "Pour water into dripper first with valve closed to target weight of 250g at around 10.0 g/s.", phase: "pour", label: "Water Pour", valve: "closed" },
-          { phaseName: "Wait", time: 5, pourTime: 0, water: 250, flow: "Resting", desc: "Prepare to add ground coffee on top.", phase: "bloom", label: "Water Rest", valve: "closed" },
-          { phaseName: "Immersion Steep", time: 120, pourTime: 0, water: 250, flow: "Steeping", desc: "Add coffee on top. At 1:30, break crust with one gentle stir.", phase: "steep", label: "Steep", valve: "closed" },
-          { phaseName: "Final Drawdown", time: 60, pourTime: 0, water: 250, flow: "Drain", desc: "Place dripper on vessel to release brewed coffee.", phase: "drawdown", label: "Valve Release", valve: "open" }
-        ];
-      } else {
-        return [
-          { phaseName: "Active Pour", time: 35, pourTime: 35, water: 500, flow: "20.0 g/s", desc: "Pour water into dripper first with valve closed to target weight of 500g at around 20.0 g/s.", phase: "pour", label: "Water Pour", valve: "closed" },
-          { phaseName: "Wait", time: 5, pourTime: 0, water: 500, flow: "Resting", desc: "Prepare to add ground coffee on top.", phase: "bloom", label: "Water Rest", valve: "closed" },
-          { phaseName: "Immersion Steep", time: 180, pourTime: 0, water: 500, flow: "Steeping", desc: "Add coffee on top. At 2:00, break crust with one gentle stir.", phase: "steep", label: "Steep", valve: "closed" },
-          { phaseName: "Final Drawdown", time: 90, pourTime: 0, water: 500, flow: "Drain", desc: "Place dripper on vessel to release brewed coffee.", phase: "drawdown", label: "Valve Release", valve: "open" }
-        ];
-      }
+  /* All brew recipes live here.
+     - water: cumulative target as a fraction of the total brew water
+     - time:  [seconds for a 250 g brew, seconds for a 500 g brew]; other sizes are interpolated/extrapolated
+     - pour:  true if the whole step is spent pouring (flow rate is then calculated)
+     - desc:  {water}, {flow} and {crust} are filled in by generateSteps()
+     - grindOffset: added to the coffee's Ode setting for this method */
+  const RECIPES = {
+    v60: {
+      name: 'V60',
+      grindOffset: 0,
+      steps: [
+        { label: "Bloom Pour", phaseName: "Active Pour", phase: "pour", water: 0.2, time: [12, 15], pour: true, desc: "Pour water gently in spirals to {water}g at around {flow}." },
+        { label: "Bloom Rest", phaseName: "Bloom Rest", phase: "bloom", water: 0.2, time: [33, 30], flow: "Resting", desc: "Allow coffee bed to bloom and release CO2 gases." },
+        { label: "First Main Pour", phaseName: "Active Pour", phase: "pour", water: 0.6, time: [20, 30], pour: true, desc: "Pour in smooth concentric spirals to target weight of {water}g at around {flow}." },
+        { label: "Bed Settle", phaseName: "Wait", phase: "bloom", water: 0.6, time: [25, 20], flow: "Resting", desc: "Allow water level to drop gently before the final pour." },
+        { label: "Final Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [20, 29], pour: true, desc: "Pour smoothly to final target weight of {water}g at around {flow}, then give one gentle swirl." },
+        { label: "Drawdown", phaseName: "Final Drawdown", phase: "drawdown", water: 1, time: [70, 86], flow: "Drain", desc: "Allow coffee to drain fully through paper filter." }
+      ]
+    },
+    switch_hybrid: {
+      name: 'Switch Hybrid',
+      grindOffset: 0.2,
+      steps: [
+        { label: "Open Bloom", phaseName: "Active Pour", phase: "pour", valve: "open", water: 0.2, time: [12, 15], pour: true, desc: "Pour bloom water with valve open to {water}g at around {flow}." },
+        { label: "Bloom Rest", phaseName: "Bloom Rest", phase: "bloom", valve: "open", water: 0.2, time: [33, 30], flow: "Resting", desc: "Allow grounds to bloom with valve open." },
+        { label: "Steep Pour", phaseName: "Active Pour", phase: "pour", valve: "closed", water: 1, time: [20, 30], pour: true, desc: "Close valve, then pour smoothly to target weight of {water}g at around {flow}." },
+        { label: "Steep", phaseName: "Immersion Steep", phase: "steep", valve: "closed", water: 1, time: [70, 90], flow: "Steeping", desc: "Allow water to steep undisturbed with valve closed." },
+        { label: "Valve Release", phaseName: "Final Drawdown", phase: "drawdown", valve: "open", water: 1, time: [45, 60], flow: "Drain", desc: "Open valve to allow coffee to drain into server." }
+      ]
+    },
+    switch_immersion: {
+      name: 'Switch Immersion',
+      grindOffset: 0.5,
+      steps: [
+        { label: "Steep Pour", phaseName: "Active Pour", phase: "pour", valve: "closed", water: 1, time: [25, 35], pour: true, desc: "Pour all water with valve closed to target weight of {water}g at around {flow}." },
+        { label: "Bed Settle", phaseName: "Wait", phase: "bloom", valve: "closed", water: 1, time: [5, 5], flow: "Resting", desc: "Allow coffee bed to settle." },
+        { label: "Steep", phaseName: "Immersion Steep", phase: "steep", valve: "closed", water: 1, time: [120, 120], flow: "Steeping", desc: "Allow coffee to steep with valve closed." },
+        { label: "Valve Release", phaseName: "Final Drawdown", phase: "drawdown", valve: "open", water: 1, time: [60, 90], flow: "Drain", desc: "Open valve to allow coffee to drain into server." }
+      ]
+    },
+    clever: {
+      name: 'Clever Dripper',
+      grindOffset: 0.5,
+      steps: [
+        { label: "Water Pour", phaseName: "Active Pour", phase: "pour", valve: "closed", water: 1, time: [25, 35], pour: true, desc: "Pour water into dripper first with valve closed to target weight of {water}g at around {flow}." },
+        { label: "Water Rest", phaseName: "Wait", phase: "bloom", valve: "closed", water: 1, time: [5, 5], flow: "Resting", desc: "Prepare to add ground coffee on top." },
+        { label: "Steep", phaseName: "Immersion Steep", phase: "steep", valve: "closed", water: 1, time: [120, 180], flow: "Steeping", desc: "Add coffee on top. At {crust}, break crust with one gentle stir." },
+        { label: "Valve Release", phaseName: "Final Drawdown", phase: "drawdown", valve: "open", water: 1, time: [60, 90], flow: "Drain", desc: "Place dripper on vessel to release brewed coffee." }
+      ]
     }
+  };
+
+  // Brews bigger than 250 g grind coarser: +1.0 on the Ode per extra 250 g of water
+  const GRIND_OFFSET_PER_250G = 1.0;
+
+  /* 0 at 250 g, 1 at 500 g. Clamped so very small or large brews don't get silly timings. */
+  function getRecipeScale(water) {
+    return Math.min(2, Math.max(-0.6, (water - 250) / 250));
+  }
+
+  function generateSteps(method, water) {
+    const recipe = RECIPES[method] || RECIPES.v60;
+    const scale = getRecipeScale(water);
+    let prevWater = 0;
+    return recipe.steps.map(t => {
+      const time = Math.max(3, Math.round(t.time[0] + (t.time[1] - t.time[0]) * scale));
+      const stepWater = Math.round(water * t.water);
+      const pourTime = t.pour ? time : 0;
+      const flow = t.pour ? `${((stepWater - prevWater) / pourTime).toFixed(1)} g/s` : t.flow;
+      // Break the crust about 70% of the way through the steep, on a 15-second mark
+      const crust = formatTime(Math.round(time * 0.7 / 15) * 15).replace(/^0/, '');
+      const desc = t.desc.replace('{water}', stepWater).replace('{flow}', flow).replace('{crust}', crust);
+      prevWater = stepWater;
+      return { phaseName: t.phaseName, time, pourTime, water: stepWater, flow, desc, phase: t.phase, label: t.label, valve: t.valve || null };
+    });
+  }
+
+  /* ---------- Dose & ratio ---------- */
+  const DOSE_LIMITS = { min: 8, max: 40 };
+  const RATIO_OPTIONS = [14, 14.5, 15, 15.5, 16, 16.5, 50 / 3, 17, 17.5, 18, 18.5, 19];
+  const DEFAULT_RATIO_INDEX = RATIO_OPTIONS.indexOf(50 / 3);
+
+  function formatRatio(ratio) {
+    return `1:${Number.isInteger(ratio) ? ratio : ratio.toFixed(1)}`;
+  }
+
+  /* ---------- Grinders ----------
+     Presets convert the Ode setting linearly through two reference points in the pour-over range ([Ode, grinder]).
+     The custom grinder maps the Ode's full dial (1–11) onto the user's finest–coarsest range.
+     All conversions are approximate starting points. */
+  const ODE_DIAL = { min: 1, max: 11 };
+  const GRINDERS = {
+    ode2:       { name: "Fellow Ode Gen 2", unit: "click", step: 0.1, min: 1, max: 11, anchors: [[4, 4], [7, 7]] },
+    comandante: { name: "Comandante C40", unit: "click", step: 1, min: 0, max: 50, anchors: [[4, 21], [7, 30]], describe: v => `${v} clicks` },
+    encore:     { name: "Baratza Encore", unit: "step", step: 1, min: 1, max: 40, anchors: [[4, 12], [7, 20]], describe: v => `setting ${v}` },
+    kultra:     { name: "1Zpresso K-Ultra", unit: "click", step: 0.1, min: 0, max: 12, anchors: [[4, 6.0], [7, 8.2]], describe: v => `${v} on the dial` },
+    aergrind:   { name: "Knock Aergrind", unit: "click", step: 1, min: 0, max: 40, anchors: [[4, 13], [7, 19]], describe: v => `${v} clicks from zero` },
+    c3smax:     { name: "Timemore Chestnut C3S Max", unit: "click", step: 1, min: 0, max: 36, anchors: [[4, 12], [7, 18]], describe: v => `${v} clicks` },
+    custom:     { name: "Custom grinder", unit: "step" }
+  };
+  const DEFAULT_CUSTOM_GRINDER = { name: "", finest: 1, coarsest: 40, step: 1 };
+
+  function loadCustomGrinder() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('bg_custom_grinder'));
+      if (saved && isValidCustomGrinder(saved)) return { ...DEFAULT_CUSTOM_GRINDER, ...saved };
+    } catch (e) {}
+    return { ...DEFAULT_CUSTOM_GRINDER };
+  }
+
+  function isValidCustomGrinder(c) {
+    return Number.isFinite(c.finest) && Number.isFinite(c.coarsest) && Number.isFinite(c.step) &&
+      c.finest !== c.coarsest && c.step > 0 && c.step <= Math.abs(c.coarsest - c.finest);
+  }
+
+  /* The active grinder as { name, unit, step, min (finest), max (coarsest), anchors?, describe? } */
+  function getGrinder() {
+    if (currentGrinderKey === 'custom') {
+      return { ...GRINDERS.custom, name: customGrinder.name.trim() || GRINDERS.custom.name, step: customGrinder.step, min: customGrinder.finest, max: customGrinder.coarsest, describe: v => `setting ${v}` };
+    }
+    return GRINDERS[currentGrinderKey] || GRINDERS.ode2;
+  }
+
+  function stepDecimals(step) {
+    const text = String(step);
+    return text.includes('.') ? Math.min(3, text.split('.')[1].length) : 0;
+  }
+
+  /* Clamp to the dial and snap to the grinder's step (works for dials that count down as they get coarser) */
+  function snapToGrinder(value, grinder) {
+    const lo = Math.min(grinder.min, grinder.max);
+    const hi = Math.max(grinder.min, grinder.max);
+    const clamped = Math.min(hi, Math.max(lo, value));
+    const snapped = grinder.min + Math.round((clamped - grinder.min) / grinder.step) * grinder.step;
+    return Number(Math.min(hi, Math.max(lo, snapped)).toFixed(stepDecimals(grinder.step)));
+  }
+
+  function convertFromOde(odeValue, grinder = getGrinder()) {
+    let value;
+    if (grinder.anchors) {
+      const [[ode1, g1], [ode2, g2]] = grinder.anchors;
+      value = g1 + (odeValue - ode1) * (g2 - g1) / (ode2 - ode1);
+    } else {
+      value = grinder.min + (odeValue - ODE_DIAL.min) / (ODE_DIAL.max - ODE_DIAL.min) * (grinder.max - grinder.min);
+    }
+    return snapToGrinder(value, grinder);
+  }
+
+  function formatGrind(value, grinder = getGrinder()) {
+    return value.toFixed(stepDecimals(grinder.step));
+  }
+
+  function describeGrind(value, grinder = getGrinder()) {
+    const text = formatGrind(value, grinder);
+    return grinder.describe ? grinder.describe(text) : text;
+  }
+
+  /* e.g. "2 clicks coarser on your Comandante C40 (try 26 clicks)" */
+  function grindAdjustmentHTML(steps, coarser) {
+    const grinder = getGrinder();
+    const current = getGrindSetting(selectedCoffeeKey);
+    const direction = (grinder.max >= grinder.min ? 1 : -1) * (coarser ? 1 : -1);
+    const target = snapToGrinder(current + direction * steps * grinder.step, grinder);
+    const amount = `${steps} ${grinder.unit}${steps === 1 ? '' : 's'}`;
+    return `<strong>${amount} ${coarser ? 'coarser' : 'finer'}</strong> on your ${grinder.name} (try <strong>${describeGrind(target, grinder)}</strong>)`;
   }
 
   function stageRowHTML(s, seconds, increment) {
@@ -607,7 +759,15 @@
   }
 
   let currentMethod = localStorage.getItem('bg_method') || 'v60';
-  let currentCups = parseInt(localStorage.getItem('bg_cups')) || 1;
+  // bg_cups is the old 1/2-cup setting; use it as the starting dose for anyone upgrading
+  let currentDose = parseInt(localStorage.getItem('bg_dose')) || (localStorage.getItem('bg_cups') === '2' ? 30 : 15);
+  let currentRatioIndex = (() => {
+    const saved = parseFloat(localStorage.getItem('bg_ratio'));
+    const index = RATIO_OPTIONS.findIndex(r => Math.abs(r - saved) < 0.01);
+    return index >= 0 ? index : DEFAULT_RATIO_INDEX;
+  })();
+  let currentGrinderKey = GRINDERS[localStorage.getItem('bg_grinder')] ? localStorage.getItem('bg_grinder') : 'ode2';
+  let customGrinder = loadCustomGrinder();
   let currentCoffeeType = localStorage.getItem('bg_type') || 'standard';
   let selectedCoffeeKey = 'medium_classic';
   
@@ -636,7 +796,7 @@
   const DRAWDOWN_OVERTIME_LIMIT = 300;
 
   function switchScreenView(activeScreenId) {
-    const screens = ['setupScreen', 'prepScreen', 'countdownScreen', 'brewScreen', 'summaryScreen'];
+    const screens = ['setupScreen', 'settingsScreen', 'prepScreen', 'countdownScreen', 'brewScreen', 'summaryScreen'];
     screens.forEach(id => {
       const el = document.getElementById(id);
       if (id === activeScreenId) {
@@ -844,15 +1004,33 @@
     renderCoffeeProfileCards();
   }
 
-  function setCupSize(size) {
+  function getWater() {
+    return Math.round(currentDose * RATIO_OPTIONS[currentRatioIndex]);
+  }
+
+  function updateBrewSizeUI() {
+    document.getElementById('doseValue').innerText = `${currentDose}g`;
+    document.getElementById('ratioValue').innerText = formatRatio(RATIO_OPTIONS[currentRatioIndex]);
+    document.getElementById('waterReadout').innerText = `💧 ${getWater()}g water`;
+    document.getElementById('btnDoseDown').disabled = currentDose <= DOSE_LIMITS.min;
+    document.getElementById('btnDoseUp').disabled = currentDose >= DOSE_LIMITS.max;
+    document.getElementById('btnRatioDown').disabled = currentRatioIndex <= 0;
+    document.getElementById('btnRatioUp').disabled = currentRatioIndex >= RATIO_OPTIONS.length - 1;
+  }
+
+  function changeDose(delta) {
     triggerHapticFeedback();
-    currentCups = size;
-    localStorage.setItem('bg_cups', size);
+    currentDose = Math.min(DOSE_LIMITS.max, Math.max(DOSE_LIMITS.min, currentDose + delta));
+    localStorage.setItem('bg_dose', currentDose);
+    updateBrewSizeUI();
+    renderCoffeeProfileCards();
+  }
 
-    const activeClass = "py-2 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button flex items-center justify-center gap-1 active:scale-95";
-    const inactiveClass = "py-2 rounded-lg transition-all text-slate-400 hover:text-white flex items-center justify-center gap-1 active:scale-95";
-    applyToggle({ 1: 'btn1Cup', 2: 'btn2Cup' }, size, activeClass, inactiveClass);
-
+  function changeRatio(delta) {
+    triggerHapticFeedback();
+    currentRatioIndex = Math.min(RATIO_OPTIONS.length - 1, Math.max(0, currentRatioIndex + delta));
+    localStorage.setItem('bg_ratio', RATIO_OPTIONS[currentRatioIndex]);
+    updateBrewSizeUI();
     renderCoffeeProfileCards();
   }
 
@@ -873,13 +1051,16 @@
     renderCoffeeProfileCards();
   }
 
-  function getCalculatedOdeSetting(coffeeKey) {
+  /* The recipe's grind on the Ode Gen 2 scale: coffee base + method offset + batch-size offset */
+  function getOdeSetting(coffeeKey) {
     const data = coffeeData[coffeeKey] || coffeeData['medium_classic'];
-    let calculatedOde = data.ode;
-    if (currentMethod === 'switch_hybrid') calculatedOde += 0.2;
-    else if (currentMethod === 'switch_immersion' || currentMethod === 'clever') calculatedOde += 0.5;
-    if (currentCups === 2) calculatedOde += 1.0;
-    return calculatedOde;
+    const method = RECIPES[currentMethod] || RECIPES.v60;
+    return data.ode + method.grindOffset + getRecipeScale(getWater()) * GRIND_OFFSET_PER_250G;
+  }
+
+  /* The recipe's grind on the user's grinder */
+  function getGrindSetting(coffeeKey) {
+    return convertFromOde(getOdeSetting(coffeeKey));
   }
 
   function renderCoffeeProfileCards() {
@@ -887,13 +1068,13 @@
     if (!container) return;
 
     container.innerHTML = '';
-    const steps = generateSteps(currentMethod, currentCups);
+    const steps = generateSteps(currentMethod, getWater());
     let totalSeconds = 0;
     steps.forEach(s => totalSeconds += s.time);
     const formattedTotalTime = formatTime(totalSeconds);
 
-    const doseText = currentCups === 1 ? "15g" : "30g";
-    const waterText = currentCups === 1 ? "250g" : "500g";
+    const doseText = `${currentDose}g`;
+    const waterText = `${getWater()}g`;
 
     let barSegmentsHTML = '';
     steps.forEach((s) => {
@@ -908,7 +1089,7 @@
 
     filteredKeys.forEach((key) => {
       const item = coffeeData[key];
-      const odeSetting = getCalculatedOdeSetting(key).toFixed(1);
+      const grindSetting = formatGrind(getGrindSetting(key));
 
       const card = document.createElement('button');
       card.type = 'button';
@@ -926,7 +1107,7 @@
           <div class="flex items-center gap-1"><span>🫘</span><span>${doseText}</span></div>
           <div class="flex items-center gap-1"><span>💧</span><span>${waterText}</span></div>
           <div class="flex items-center gap-1"><span>🌡️</span><span>${item.temp}</span></div>
-          <div class="flex items-center gap-1"><span>⚙️</span><span>${odeSetting}</span></div>
+          <div class="flex items-center gap-1"><span>⚙️</span><span>${grindSetting}</span></div>
           <div class="flex items-center gap-1 font-mono"><span>⏱️</span><span>${formattedTotalTime}</span></div>
         </div>
       `;
@@ -942,13 +1123,13 @@
 
   function goToPrepScreen() {
     const data = coffeeData[selectedCoffeeKey] || coffeeData['medium_classic'];
-    const calculatedOde = getCalculatedOdeSetting(selectedCoffeeKey);
-    const waterGrams = currentCups === 1 ? 250 : 500;
-    const doseGrams = currentCups === 1 ? "15.0g" : "30.0g";
+    const odeSetting = getOdeSetting(selectedCoffeeKey);
+    const waterGrams = getWater();
+    const doseGrams = `${currentDose.toFixed(1)}g`;
 
     document.getElementById('prepInstructionBoil').innerText = `Boil at least ${waterGrams}ml water to ${data.temp}.`;
     document.getElementById('prepInstructionWeigh').innerText = `Weigh ${doseGrams} coffee beans.`;
-    document.getElementById('prepInstructionGrind').innerText = `Grind to ${calculatedOde.toFixed(1)} on Fellow Ode Gen 2 (${getGrindTextureLabel(calculatedOde)}).`;
+    document.getElementById('prepInstructionGrind').innerText = `Grind to ${describeGrind(getGrindSetting(selectedCoffeeKey))} on your ${getGrinder().name} (${getGrindTextureLabel(odeSetting)}).`;
 
     const step5Title = document.getElementById('prepStep5Title');
     const step5Desc = document.getElementById('prepStep5Desc');
@@ -964,6 +1145,89 @@
     switchScreenView('prepScreen');
   }
 
+  function openSettings() {
+    triggerHapticFeedback();
+    const c = customGrinder;
+    document.getElementById('customName').value = c.name;
+    document.getElementById('customFinest').value = c.finest;
+    document.getElementById('customCoarsest').value = c.coarsest;
+    document.getElementById('customStep').value = c.step;
+    document.getElementById('customGrinderError').classList.add('hidden');
+    renderGrinderSettings();
+    switchScreenView('settingsScreen');
+  }
+
+  function closeSettings() {
+    triggerHapticFeedback();
+    renderCoffeeProfileCards();
+    switchScreenView('setupScreen');
+  }
+
+  function setGrinder(key) {
+    triggerHapticFeedback();
+    currentGrinderKey = key;
+    localStorage.setItem('bg_grinder', key);
+    renderGrinderSettings();
+  }
+
+  function renderGrinderSettings() {
+    const options = document.getElementById('grinderOptions');
+    options.innerHTML = '';
+    Object.entries(GRINDERS).forEach(([key, grinder]) => {
+      const isActive = key === currentGrinderKey;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = isActive
+        ? "py-2.5 px-2 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button leading-tight active:scale-95"
+        : "py-2.5 px-2 rounded-lg transition-all bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white leading-tight active:scale-95";
+      btn.setAttribute('aria-pressed', isActive);
+      btn.innerText = key === 'custom' ? 'Custom…' : grinder.name;
+      btn.onclick = () => setGrinder(key);
+      options.appendChild(btn);
+    });
+    document.getElementById('customGrinderPanel').classList.toggle('hidden', currentGrinderKey !== 'custom');
+    document.getElementById('grinderChipName').innerText = getGrinder().name;
+    renderGrinderPreview();
+  }
+
+  function saveCustomGrinder() {
+    const draft = {
+      name: document.getElementById('customName').value,
+      finest: parseFloat(document.getElementById('customFinest').value),
+      coarsest: parseFloat(document.getElementById('customCoarsest').value),
+      step: parseFloat(document.getElementById('customStep').value)
+    };
+    const error = document.getElementById('customGrinderError');
+    if (!isValidCustomGrinder(draft)) {
+      error.innerText = "Enter different finest and coarsest settings, and a step bigger than 0 that fits between them.";
+      error.classList.remove('hidden');
+      return;
+    }
+    error.classList.add('hidden');
+    customGrinder = draft;
+    localStorage.setItem('bg_custom_grinder', JSON.stringify(draft));
+    document.getElementById('grinderChipName').innerText = getGrinder().name;
+    renderGrinderPreview();
+  }
+
+  /* Shows what the current method, dose and coffee type convert to on the chosen grinder */
+  function renderGrinderPreview() {
+    const grinder = getGrinder();
+    document.getElementById('grinderPreviewTitle').innerText =
+      `PREVIEW · ${(RECIPES[currentMethod] || RECIPES.v60).name} · ${currentDose}g / ${getWater()}g`;
+    const preview = document.getElementById('grinderPreview');
+    preview.innerHTML = '';
+    Object.keys(coffeeData).filter(key => coffeeData[key].category === currentCoffeeType).forEach(key => {
+      const odeText = getOdeSetting(key).toFixed(1);
+      const row = document.createElement('div');
+      row.className = "flex items-center justify-between gap-2 border-b border-borderDark/60 pb-1 last:border-0";
+      row.innerHTML = `
+        <span class="text-slate-300 truncate">${coffeeData[key].name}</span>
+        <span class="shrink-0 font-mono font-bold text-white">${currentGrinderKey === 'ode2' ? odeText : `<span class="text-slate-500">Ode ${odeText} →</span> ${describeGrind(convertFromOde(getOdeSetting(key), grinder), grinder)}`}</span>`;
+      preview.appendChild(row);
+    });
+  }
+
   function goToSetupScreen() {
     triggerHapticFeedback();
     switchScreenView('setupScreen');
@@ -971,20 +1235,17 @@
 
   function brewStatsHTML(totalSeconds) {
     const data = coffeeData[selectedCoffeeKey] || coffeeData['medium_classic'];
-    const calculatedOde = getCalculatedOdeSetting(selectedCoffeeKey).toFixed(1);
-    const doseText = currentCups === 1 ? "15g" : "30g";
-    const waterText = currentCups === 1 ? "250g" : "500g";
     return `
-      <span class="flex items-center gap-0.5">🫘 ${doseText}</span>
-      <span class="flex items-center gap-0.5">💧 ${waterText}</span>
+      <span class="flex items-center gap-0.5">🫘 ${currentDose}g</span>
+      <span class="flex items-center gap-0.5">💧 ${getWater()}g</span>
       <span class="flex items-center gap-0.5">🌡️ ${data.temp}</span>
-      <span class="flex items-center gap-0.5">⚙️ ${calculatedOde}</span>
+      <span class="flex items-center gap-0.5">⚙️ ${formatGrind(getGrindSetting(selectedCoffeeKey))}</span>
       <span class="flex items-center gap-0.5 font-mono text-slate-200">⏱️ ${formatTime(totalSeconds)}</span>
     `;
   }
 
   function populateRecipeOverview() {
-    const steps = generateSteps(currentMethod, currentCups);
+    const steps = generateSteps(currentMethod, getWater());
     const overviewList = document.getElementById('overviewList');
 
     overviewList.innerHTML = '';
@@ -1291,7 +1552,7 @@
   }
 
   function generateTargetProfile() {
-    const steps = generateSteps(currentMethod, currentCups);
+    const steps = generateSteps(currentMethod, getWater());
     activeSteps = steps;
     targetProfileData = [{ x: 0, y: 0 }];
     brewTotalDuration = 0;
@@ -1323,7 +1584,7 @@
   function initChart() {
     const ctx = document.getElementById('brewChartCanvas').getContext('2d');
     if (brewChart) brewChart.destroy();
-    const maxY = currentCups === 1 ? 275 : 550;
+    const maxY = Math.ceil(getWater() * 1.1 / 25) * 25;
 
     brewChart = new Chart(ctx, {
       type: 'line',
@@ -1661,12 +1922,13 @@
     document.getElementById('tastingNotes').innerText = data.notes;
 
     const diag = document.getElementById('diagnosticAdvice');
+    const coarserOneStep = grindAdjustmentHTML(1, true);
     if (currentMethod === 'v60') {
-      diag.innerText = "If your brew tastes dry or astringent, your grind was slightly too fine. Coarsen your Fellow Ode Gen 2 by 1 click for your next brew.";
+      diag.innerHTML = `If your brew tastes dry or astringent, your grind was slightly too fine. Go ${coarserOneStep} next time.`;
     } else if (currentMethod.includes('switch')) {
-      diag.innerText = "If drawdown stalled during valve open phase, coarsen your Fellow Ode Gen 2 by 1 click to minimize fine migration.";
+      diag.innerHTML = `If drawdown stalled during the valve-open phase, go ${coarserOneStep} to reduce fines migration.`;
     } else {
-      diag.innerText = "If cup feels muddy or overly heavy, coarsen your Fellow Ode Gen 2 setting slightly.";
+      diag.innerHTML = `If the cup feels muddy or overly heavy, go ${coarserOneStep} next time.`;
     }
 
     renderDrawdownFeedback(drawdownSeconds);
@@ -1680,7 +1942,8 @@
     if (drawdownSeconds === null) {
       title.className = `${titleClass} text-amber-400`;
       title.innerText = "⏱️ Drawdown / Brew Time Longer Than Expected?";
-      advice.innerHTML = "If your filter stalled or total time exceeded recipe targets, microscopic coffee fines clogged your filter paper. For your next brew, increase your <strong>Fellow Ode Gen 2</strong> setting by <strong>+1 to +2 clicks coarser</strong>. Tap <strong>Done</strong> when the coffee stops dripping next time to get advice based on your actual drawdown.";
+      const unit = getGrinder().unit;
+      advice.innerHTML = `If your filter stalled or total time exceeded recipe targets, microscopic coffee fines clogged your filter paper. For your next brew, go <strong>1–2 ${unit}s coarser</strong> on your ${getGrinder().name}. Tap <strong>Done</strong> when the coffee stops dripping next time to get advice based on your actual drawdown.`;
       return;
     }
 
@@ -1689,18 +1952,18 @@
     const diff = actual - target;
     // Within ±15% (at least 10 s) counts as on target; more than twice that is a big miss
     const tolerance = Math.max(10, Math.round(target * 0.15));
-    const clicks = Math.abs(diff) > tolerance * 2 ? "2 clicks" : "1 click";
+    const steps = Math.abs(diff) > tolerance * 2 ? 2 : 1;
 
     title.innerText = `⏱️ Drawdown ${formatTime(actual)} · Target ${formatTime(target)}`;
     if (Math.abs(diff) <= tolerance) {
       title.className = `${titleClass} text-emerald-400`;
-      advice.innerHTML = `Right on target (${diff >= 0 ? '+' : '−'}${Math.abs(diff)}s). Keep the same <strong>Fellow Ode Gen 2</strong> setting next time.`;
+      advice.innerHTML = `Right on target (${diff >= 0 ? '+' : '−'}${Math.abs(diff)}s). Keep the same setting (<strong>${describeGrind(getGrindSetting(selectedCoffeeKey))}</strong> on your ${getGrinder().name}) next time.`;
     } else if (diff > 0) {
       title.className = `${titleClass} text-amber-400`;
-      advice.innerHTML = `<strong>${diff}s slower</strong> than the recipe. A slow drawdown usually means the grind was a little fine or fines clogged the filter, which can taste bitter or dry. Go <strong>${clicks} coarser</strong> on your Fellow Ode Gen 2 next time.`;
+      advice.innerHTML = `<strong>${diff}s slower</strong> than the recipe. A slow drawdown usually means the grind was a little fine or fines clogged the filter, which can taste bitter or dry. Go ${grindAdjustmentHTML(steps, true)} next time.`;
     } else {
       title.className = `${titleClass} text-amber-400`;
-      advice.innerHTML = `<strong>${-diff}s faster</strong> than the recipe. A quick drawdown usually means the grind was a little coarse, which can taste sour or thin. Go <strong>${clicks} finer</strong> on your Fellow Ode Gen 2 next time.`;
+      advice.innerHTML = `<strong>${-diff}s faster</strong> than the recipe. A quick drawdown usually means the grind was a little coarse, which can taste sour or thin. Go ${grindAdjustmentHTML(steps, false)} next time.`;
     }
   }
 
@@ -1714,8 +1977,9 @@
   });
 
   updateVoiceButton();
+  document.getElementById('grinderChipName').innerText = getGrinder().name;
+  updateBrewSizeUI();
   setBrewMethod(currentMethod);
-  setCupSize(currentCups);
   setCoffeeType(currentCoffeeType);
 </script>
 </body>
