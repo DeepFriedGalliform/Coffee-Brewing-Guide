@@ -24,9 +24,11 @@
 - **Live brew timer** with three views:
   - **Ring**: a rotating timeline with the target scale weight, flow rate, an animated dripper and the Switch valve state (open or closed).
   - **Summary**: every stage with a live progress fill.
-  - **Chart**: target pour profile against elapsed time.
+  - **Chart**: your progress plotted against the target pour profile.
+- **Spoken prompts** such as "Close the valve. Steep Pour. Pour to 250 grams.", so you don't need to watch the screen while pouring. Tap the speaker icon next to the timer to turn them off; the choice is remembered.
 - **Audio and haptic cues**: a 5-second get-ready countdown, beeps for the last 4 seconds of each stage, a chime and vibration at each stage change, and a fanfare when you finish.
-- **Pause, Back and Skip** controls. The screen stays awake while brewing.
+- **Drawdown timing**: during the final drawdown the Pause button becomes **Done**. Tap it when the coffee stops dripping, and the completion screen compares your drawdown with the recipe and tells you whether to grind coarser, finer, or keep the same setting. If the timer runs out first, it keeps counting until you tap Done.
+- **Pause, Back and Skip** controls, a Cancel button on the countdown, and a tap-twice Cancel Brew so a stray tap can't end your brew. The screen stays awake while brewing.
 - **Works offline** once loaded, and remembers your last method, size, coffee type and view.
 
 ## Install on your phone
@@ -41,8 +43,9 @@
 
 1. **Setup**: pick a brew method, cup size and coffee type, then tap a profile card.
 2. **Checklist**: boil, weigh, grind, rinse the filter and prep the brewer, then check the brew summary.
-3. **Brew**: tap **Start Brew Cycle**, follow the on-screen instruction for each stage, and pour to the target weight shown.
-4. **Finish**: read the tasting notes and the grind advice for your next brew.
+3. **Brew**: tap **Start Brew Cycle**, follow the on-screen (and spoken) instruction for each stage, and pour to the target weight shown.
+4. **Drawdown**: tap **Done** as soon as the coffee stops dripping.
+5. **Finish**: read the tasting notes and the grind advice for your next brew.
 
 ## Hosting on GitHub Pages
 
@@ -58,14 +61,29 @@ Every push to `main` redeploys automatically. The empty `.nojekyll` file tells P
 ## Project structure
 
 ```
-index.html             The whole app: markup, styles and JavaScript
+index.html             The whole app: markup, custom styles and JavaScript
+styles.css             Tailwind CSS built from the classes used in index.html (committed, so Pages needs no build)
+src/tailwind.css       Tailwind source for styles.css
+tailwind.config.js     Tailwind theme (app colours and shadows)
+package.json           Build scripts for styles.css
 manifest.webmanifest   Web app manifest (name, colours, icons) for "Add to Home Screen"
 sw.js                  Service worker that caches the app for offline use
 icons/                 Coffee-bean app icon: SVG source plus PNG sizes for each platform
 .nojekyll              Tells GitHub Pages to skip Jekyll processing
 ```
 
-The app loads [Tailwind CSS](https://tailwindcss.com/) (Play CDN), [Chart.js](https://www.chartjs.org/) and the [Inter](https://rsms.me/inter/) font from CDNs. The service worker caches them after the first visit.
+[Chart.js](https://www.chartjs.org/) and the [Inter](https://rsms.me/inter/) font load from CDNs. The service worker caches them after the first visit.
+
+## Rebuilding the CSS
+
+`styles.css` contains only the Tailwind classes that `index.html` uses. If you add or change Tailwind classes, rebuild it (needs [Node.js](https://nodejs.org/)):
+
+```sh
+npm install
+npm run build:css     # or: npm run watch:css while editing
+```
+
+Commit the updated `styles.css` together with your `index.html` changes.
 
 ## Customising
 
@@ -73,7 +91,7 @@ The app loads [Tailwind CSS](https://tailwindcss.com/) (Play CDN), [Chart.js](ht
 - **Recipes and timings**: edit `generateSteps(method, cups)`. Each step has a duration in seconds (`time`), the time spent pouring (`pourTime`), the cumulative target weight (`water`), the flow rate shown on screen, the instruction text, its `phase` (`pour`, `bloom`, `steep` or `drawdown`) and the Switch `valve` state.
 - **Grind offsets**: `getCalculatedOdeSetting` adds +0.2 for Switch hybrid, +0.5 for full immersion or Clever, and +1.0 for two cups.
 
-After changing any file, bump `CACHE_VERSION` in `sw.js` (for example `brew-guide-v2`) so installed copies pick up the update.
+After changing any file, bump `CACHE_VERSION` in `sw.js` (for example `brew-guide-v3`) so installed copies pick up the update.
 
 ## Running locally
 
