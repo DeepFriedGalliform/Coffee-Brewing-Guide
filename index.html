@@ -21,34 +21,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            volvic: '#00A887',
-            volvicDark: '#007A62',
-            bronze: '#D4A373',
-            gold: '#D4A359',
-            switchClosed: '#E11D48',
-            switchOpen: '#059669',
-            darkBg: '#121214',
-            cardBg: '#1A1A1E',
-            borderDark: '#2A2A30'
-          },
-          boxShadow: {
-            'depth-card': '0 20px 40px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
-            'depth-inner': 'inset 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-            'depth-button': '0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
-            'depth-button-active': 'inset 0 2px 4px rgba(0, 0, 0, 0.5)',
-            'badge': '0 4px 10px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3)'
-          }
-        }
-      }
-    }
-  </script>
   <style>
     :root {
       --pad-top: max(12px, env(safe-area-inset-top));
@@ -307,7 +281,13 @@
         <p class="text-xs text-slate-400 mt-2">Get your kettle ready and tare your scale...</p>
       </div>
     </div>
-    <button onclick="skipCountdown()" class="text-xs font-bold text-slate-400 hover:text-white underline underline-offset-4 py-3">Skip Countdown & Start Now</button>
+    <div class="w-full grid grid-cols-3 gap-2.5">
+      <button onclick="cancelCountdown()" class="col-span-1 bg-darkBg hover:bg-borderDark text-slate-300 font-bold py-3 rounded-2xl border border-borderDark shadow-depth-button text-xs transition-all active:scale-95 flex items-center justify-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span>Cancel</span>
+      </button>
+      <button onclick="skipCountdown()" class="col-span-2 bg-darkBg hover:bg-borderDark text-slate-300 font-bold py-3 rounded-2xl border border-borderDark shadow-depth-button text-xs transition-all active:scale-95">Skip Countdown & Start Now</button>
+    </div>
   </div>
 
   <!-- ==================== 3. ACTIVE BREW TIMER & VIEWS ==================== -->
@@ -322,9 +302,12 @@
         </div>
       </div>
 
-      <div class="w-full bg-cardBg/90 border border-borderDark/90 p-2.5 rounded-2xl shadow-depth-inner flex flex-col items-center justify-center text-center">
+      <div class="relative w-full bg-cardBg/90 border border-borderDark/90 p-2.5 rounded-2xl shadow-depth-inner flex flex-col items-center justify-center text-center">
         <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">TOTAL BREW TIME</span>
         <span id="totalElapsedTimer" class="text-xl font-black text-white font-mono tracking-tight leading-none drop-shadow">00:00</span>
+        <button id="btnVoice" onclick="toggleVoice()" class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-volvic hover:text-white active:scale-95 transition-all" title="Voice prompts" aria-label="Voice prompts" aria-pressed="true">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path id="voiceIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=""></path></svg>
+        </button>
       </div>
 
       <div id="unifiedStatusBubble" aria-live="polite" class="w-full px-4 py-3 rounded-2xl border bg-volvic/15 border-volvic/40 shadow-depth-inner text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-[85px]">
@@ -440,7 +423,7 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
           <span>Back</span>
         </button>
-        <button id="btnPause" onclick="togglePause()" class="bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 px-2 rounded-xl border border-volvic/30 shadow-depth-button active:scale-95 transition-all text-sm flex items-center justify-center gap-1">
+        <button id="btnPause" onclick="onPrimaryControl()" class="bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 px-2 rounded-xl border border-volvic/30 shadow-depth-button active:scale-95 transition-all text-sm flex items-center justify-center gap-1">
           <span>Pause</span>
         </button>
         <button onclick="nextStep()" class="bg-darkBg hover:bg-borderDark text-slate-300 font-bold py-3 px-2 rounded-xl border border-borderDark shadow-depth-button active:scale-95 transition-all text-xs flex items-center justify-center gap-1">
@@ -448,9 +431,9 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </button>
       </div>
-      <button onclick="cancelBrew()" class="w-full bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 font-extrabold py-3 px-3 rounded-xl border border-rose-500/40 shadow-depth-button active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-2">
+      <button id="btnCancelBrew" onclick="cancelBrew()" class="w-full bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 font-extrabold py-3 px-3 rounded-xl border border-rose-500/40 shadow-depth-button active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6L6 18"></path></svg>
-        Cancel Brew
+        <span id="cancelBrewLabel">Cancel Brew</span>
       </button>
     </div>
   </div>
@@ -482,12 +465,8 @@
         <p id="diagnosticAdvice" class="text-xs text-slate-300 leading-relaxed mb-2">--</p>
         
         <div id="drawdownDiagnosticBox" class="border-t border-borderDark/80 pt-2 mt-2">
-          <div class="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-            <span>⏱️ Drawdown / Brew Time Longer Than Expected?</span>
-          </div>
-          <p class="text-[11px] text-slate-300 leading-relaxed">
-            If your filter stalled or total time exceeded recipe targets, microscopic coffee fines clogged your filter paper. For your next brew, increase your <strong>Fellow Ode Gen 2</strong> setting by <strong>+1 to +2 clicks coarser</strong>.
-          </p>
+          <div id="drawdownTitle" class="text-[11px] font-extrabold text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1">⏱️ Drawdown / Brew Time Longer Than Expected?</div>
+          <p id="drawdownAdvice" class="text-[11px] text-slate-300 leading-relaxed"></p>
         </div>
       </div>
     </div>
@@ -649,6 +628,12 @@
   let lastChimeSecond = -1;
   let lastStepIndex = -1;
   let activeSteps = [];
+  let primaryControlMode = null;
+  let cancelArmTimeout = null;
+  let overtimeAnnounced = false;
+
+  // If the timer runs out before the user taps Done, keep counting this long before finishing anyway
+  const DRAWDOWN_OVERTIME_LIMIT = 300;
 
   function switchScreenView(activeScreenId) {
     const screens = ['setupScreen', 'prepScreen', 'countdownScreen', 'brewScreen', 'summaryScreen'];
@@ -677,6 +662,78 @@
     if (!wakeLock) return;
     try { await wakeLock.release(); } catch (e) {}
     wakeLock = null;
+  }
+
+  const voiceSupported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  let voiceEnabled = localStorage.getItem('bg_voice') !== 'off';
+
+  function speak(text) {
+    if (!voiceEnabled || !voiceSupported) return;
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    } catch (e) {}
+  }
+
+  function stopSpeaking() {
+    if (voiceSupported) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+  }
+
+  function updateVoiceButton() {
+    const btn = document.getElementById('btnVoice');
+    if (!voiceSupported) {
+      btn.style.display = 'none';
+      return;
+    }
+    const speakerPath = "M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z";
+    document.getElementById('voiceIconPath').setAttribute('d', voiceEnabled
+      ? speakerPath + "M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728"
+      : speakerPath + "M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2");
+    btn.setAttribute('aria-pressed', voiceEnabled);
+    btn.title = voiceEnabled ? 'Voice prompts on' : 'Voice prompts off';
+    btn.className = `absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center ${voiceEnabled ? 'text-volvic' : 'text-slate-500'} hover:text-white active:scale-95 transition-all`;
+  }
+
+  function toggleVoice() {
+    triggerHapticFeedback();
+    voiceEnabled = !voiceEnabled;
+    localStorage.setItem('bg_voice', voiceEnabled ? 'on' : 'off');
+    updateVoiceButton();
+    if (voiceEnabled) speak('Voice prompts on.');
+    else stopSpeaking();
+  }
+
+  function spokenDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    const parts = [];
+    if (mins) parts.push(`${mins} minute${mins === 1 ? '' : 's'}`);
+    if (secs) parts.push(`${secs} seconds`);
+    return parts.join(' ');
+  }
+
+  /* Short spoken cue for the start of a step, e.g. "Close the valve. Steep Pour. Pour to 250 grams." */
+  function getStepSpeech(index) {
+    const s = activeSteps[index];
+    const prev = activeSteps[index - 1];
+    const isSwitch = currentMethod.startsWith('switch');
+    let valveCue = '';
+    if (isSwitch && s.valve && (!prev || prev.valve !== s.valve)) {
+      valveCue = s.valve === 'closed' ? 'Close the valve. ' : 'Open the valve. ';
+    }
+
+    if (s.pourTime > 0) return `${valveCue}${s.label}. Pour to ${s.water} grams.`;
+    if (s.phase === 'drawdown') {
+      if (currentMethod === 'clever') return 'Place the dripper on your cup to drain. Tap Done when it stops dripping.';
+      return `${valveCue}Drawdown. Tap Done when it stops dripping.`;
+    }
+    if (s.phase === 'steep') {
+      if (currentMethod === 'clever') return `Add the coffee. Steep for ${spokenDuration(s.time)}.`;
+      return `${valveCue}Steep for ${spokenDuration(s.time)}.`;
+    }
+    return `${valveCue}${s.label}. ${spokenDuration(s.time)}.`;
   }
 
   let audioCtx = null;
@@ -1211,7 +1268,17 @@
         triggerVibration([150]);
       }
       lastStepIndex = stepState.stepIndex;
+      speak(getStepSpeech(stepState.stepIndex));
     }
+
+    const isOvertime = exactTime >= brewTotalDuration;
+    if (isOvertime && !overtimeAnnounced) {
+      overtimeAnnounced = true;
+      playDistinctChime();
+      triggerVibration([150, 100, 150]);
+      speak('Still draining? Tap Done when it stops dripping.');
+    }
+    updatePrimaryControl(stepState.stepIndex === activeSteps.length - 1);
 
     const waterState = getWaterSimulationState(exactTime, activeSteps);
     document.getElementById('totalElapsedTimer').innerText = formatTime(exactTime);
@@ -1220,7 +1287,7 @@
     if (currentBrewView === 'ring') updateLiveRingView(exactTime, stepState, waterState);
     else if (currentBrewView === 'summary') updateLiveStagesProgress(exactTime);
 
-    updateUIState(stepState);
+    updateUIState(stepState, isOvertime);
   }
 
   function generateTargetProfile() {
@@ -1273,7 +1340,7 @@
             tension: 0.1
           },
           {
-            label: 'Live Brew',
+            label: 'Progress',
             data: actualProfileData,
             borderColor: '#00A887',
             backgroundColor: 'rgba(0, 168, 135, 0.2)',
@@ -1337,6 +1404,7 @@
     remainingCountdown = 5;
     document.getElementById('countdownNumber').innerText = remainingCountdown;
 
+    speak('Get ready.');
     clearInterval(countdownInterval);
     countdownInterval = setInterval(() => {
       remainingCountdown--;
@@ -1358,6 +1426,14 @@
     startActiveBrewTimer();
   }
 
+  function cancelCountdown() {
+    triggerHapticFeedback();
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+    stopSpeaking();
+    switchScreenView('prepScreen');
+  }
+
   function startActiveBrewTimer() {
     switchScreenView('brewScreen');
     generateTargetProfile();
@@ -1369,7 +1445,10 @@
     isPaused = false;
     lastChimeSecond = -1;
     lastStepIndex = -1;
-    document.getElementById('btnPause').innerText = "Pause";
+    overtimeAnnounced = false;
+    disarmCancel();
+    primaryControlMode = null;
+    updatePrimaryControl(false);
     setBrewView(currentBrewView);
     requestWakeLock();
 
@@ -1400,7 +1479,13 @@
     brewStartTime = now - pausedDuration - currentPause - (seconds * 1000);
     lastChimeSecond = -1;
     lastStepIndex = getStepState(seconds, activeSteps).stepIndex;
+    // Drawdown can't be paused (the coffee keeps draining), so resume if we land on it while paused
+    if (isPaused && lastStepIndex === activeSteps.length - 1) {
+      pausedDuration += now - pauseStartTime;
+      isPaused = false;
+    }
     playDistinctChime();
+    speak(getStepSpeech(lastStepIndex));
     renderBrewFrame(seconds);
   }
 
@@ -1410,7 +1495,7 @@
       if (isBrewing() && !isPaused) {
         const currentElapsed = getElapsedSeconds(timestamp);
 
-        if (currentElapsed >= brewTotalDuration) {
+        if (currentElapsed >= brewTotalDuration + DRAWDOWN_OVERTIME_LIMIT) {
           finishBrew();
           return;
         }
@@ -1433,15 +1518,23 @@
     animFrameId = requestAnimationFrame(loop);
   }
 
-  function updateUIState({ step, timeInStep }) {
+  function updateUIState({ step, stepIndex, timeInStep }, isOvertime) {
     const isPouring = step.pourTime > 0 && timeInStep < step.pourTime;
 
     const stepTitleHeader = document.getElementById('stepTitleHeader');
     const instruction = document.getElementById('unifiedInstruction');
     const statusBubble = document.getElementById('unifiedStatusBubble');
 
+    if (isOvertime) {
+      stepTitleHeader.innerText = "Still Draining?";
+      instruction.innerText = "Past the target time. Tap Done the moment it stops dripping.";
+      stepTitleHeader.className = "text-sm sm:text-base font-black tracking-wide uppercase text-amber-400 drop-shadow-sm";
+      statusBubble.className = "w-full px-4 py-3 rounded-2xl border bg-amber-500/15 border-amber-400/60 shadow-depth-inner text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-[85px]";
+      return;
+    }
+
     stepTitleHeader.innerText = step.phaseName;
-    instruction.innerText = step.desc;
+    instruction.innerText = stepIndex === activeSteps.length - 1 ? `${step.desc} Tap Done when it stops dripping.` : step.desc;
 
     if (isPouring) {
       stepTitleHeader.className = "text-sm sm:text-base font-black tracking-wide uppercase text-volvic drop-shadow-sm";
@@ -1465,18 +1558,41 @@
     statusBubble.className = "w-full px-4 py-3 rounded-2xl border bg-bronze/15 border-bronze/40 shadow-depth-inner text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-[85px]";
   }
 
+  /* The middle control is Pause/Resume, except during the final drawdown where it becomes Done */
+  function updatePrimaryControl(isDrawdown) {
+    const mode = isDrawdown ? 'done' : (isPaused ? 'resume' : 'pause');
+    if (mode === primaryControlMode) return;
+    primaryControlMode = mode;
+    const btn = document.getElementById('btnPause');
+    if (mode === 'done') {
+      btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Done</span>`;
+      btn.setAttribute('aria-label', 'Done, coffee has finished draining');
+    } else {
+      btn.innerHTML = `<span>${mode === 'resume' ? 'Resume' : 'Pause'}</span>`;
+      btn.removeAttribute('aria-label');
+    }
+  }
+
+  function onPrimaryControl() {
+    if (primaryControlMode === 'done') markDrawdownComplete();
+    else togglePause();
+  }
+
   function togglePause() {
     triggerHapticFeedback();
-    const btn = document.getElementById('btnPause');
     if (!isPaused) {
       pauseStartTime = performance.now();
       isPaused = true;
-      btn.innerText = "Resume";
     } else {
       pausedDuration += (performance.now() - pauseStartTime);
       isPaused = false;
-      btn.innerText = "Pause";
     }
+    updatePrimaryControl(false);
+  }
+
+  function markDrawdownComplete() {
+    triggerHapticFeedback();
+    finishBrew(getElapsedSeconds() - getStepStartTime(activeSteps.length - 1));
   }
 
   function nextStep() {
@@ -1493,8 +1609,28 @@
     seekTo(getStepStartTime(target));
   }
 
+  /* First tap arms the button; a second tap within 3 seconds actually cancels */
+  function armCancel() {
+    document.getElementById('cancelBrewLabel').innerText = "Tap again to end brew";
+    document.getElementById('btnCancelBrew').className = "w-full bg-rose-600 hover:bg-rose-500 text-white font-extrabold py-3 px-3 rounded-xl border border-rose-400 shadow-depth-button active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-2";
+    cancelArmTimeout = setTimeout(disarmCancel, 3000);
+  }
+
+  function disarmCancel() {
+    clearTimeout(cancelArmTimeout);
+    cancelArmTimeout = null;
+    document.getElementById('cancelBrewLabel').innerText = "Cancel Brew";
+    document.getElementById('btnCancelBrew').className = "w-full bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 font-extrabold py-3 px-3 rounded-xl border border-rose-500/40 shadow-depth-button active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-2";
+  }
+
   function cancelBrew() {
     triggerHapticFeedback();
+    if (!cancelArmTimeout) {
+      armCancel();
+      return;
+    }
+    disarmCancel();
+    stopSpeaking();
     clearInterval(countdownInterval);
     if (animFrameId) cancelAnimationFrame(animFrameId);
     countdownInterval = null;
@@ -1504,17 +1640,18 @@
 
     switchScreenView('setupScreen');
     document.getElementById('totalElapsedTimer').innerText = "00:00";
-    document.getElementById('btnPause').innerText = "Pause";
   }
 
-  function finishBrew() {
+  /* drawdownSeconds is how long the final drawdown actually took, or null if it wasn't recorded */
+  function finishBrew(drawdownSeconds = null) {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     animFrameId = null;
-    const finalElapsed = Math.min(getElapsedSeconds(), brewTotalDuration);
+    const finalElapsed = getElapsedSeconds();
     isPaused = false;
-    document.getElementById('btnPause').innerText = "Pause";
+    disarmCancel();
     releaseWakeLock();
     playCompletionSound();
+    speak('Brew complete. Enjoy your coffee.');
     triggerVibration([300, 150, 300, 150, 400]);
 
     switchScreenView('summaryScreen');
@@ -1531,6 +1668,40 @@
     } else {
       diag.innerText = "If cup feels muddy or overly heavy, coarsen your Fellow Ode Gen 2 setting slightly.";
     }
+
+    renderDrawdownFeedback(drawdownSeconds);
+  }
+
+  function renderDrawdownFeedback(drawdownSeconds) {
+    const title = document.getElementById('drawdownTitle');
+    const advice = document.getElementById('drawdownAdvice');
+    const titleClass = "text-[11px] font-extrabold uppercase tracking-wider mb-1 flex items-center gap-1";
+
+    if (drawdownSeconds === null) {
+      title.className = `${titleClass} text-amber-400`;
+      title.innerText = "⏱️ Drawdown / Brew Time Longer Than Expected?";
+      advice.innerHTML = "If your filter stalled or total time exceeded recipe targets, microscopic coffee fines clogged your filter paper. For your next brew, increase your <strong>Fellow Ode Gen 2</strong> setting by <strong>+1 to +2 clicks coarser</strong>. Tap <strong>Done</strong> when the coffee stops dripping next time to get advice based on your actual drawdown.";
+      return;
+    }
+
+    const target = activeSteps[activeSteps.length - 1].time;
+    const actual = Math.round(drawdownSeconds);
+    const diff = actual - target;
+    // Within ±15% (at least 10 s) counts as on target; more than twice that is a big miss
+    const tolerance = Math.max(10, Math.round(target * 0.15));
+    const clicks = Math.abs(diff) > tolerance * 2 ? "2 clicks" : "1 click";
+
+    title.innerText = `⏱️ Drawdown ${formatTime(actual)} · Target ${formatTime(target)}`;
+    if (Math.abs(diff) <= tolerance) {
+      title.className = `${titleClass} text-emerald-400`;
+      advice.innerHTML = `Right on target (${diff >= 0 ? '+' : '−'}${Math.abs(diff)}s). Keep the same <strong>Fellow Ode Gen 2</strong> setting next time.`;
+    } else if (diff > 0) {
+      title.className = `${titleClass} text-amber-400`;
+      advice.innerHTML = `<strong>${diff}s slower</strong> than the recipe. A slow drawdown usually means the grind was a little fine or fines clogged the filter, which can taste bitter or dry. Go <strong>${clicks} coarser</strong> on your Fellow Ode Gen 2 next time.`;
+    } else {
+      title.className = `${titleClass} text-amber-400`;
+      advice.innerHTML = `<strong>${-diff}s faster</strong> than the recipe. A quick drawdown usually means the grind was a little coarse, which can taste sour or thin. Go <strong>${clicks} finer</strong> on your Fellow Ode Gen 2 next time.`;
+    }
   }
 
   function resetApp() {
@@ -1542,6 +1713,7 @@
     if (document.visibilityState === 'visible' && isBrewing()) requestWakeLock();
   });
 
+  updateVoiceButton();
   setBrewMethod(currentMethod);
   setCupSize(currentCups);
   setCoffeeType(currentCoffeeType);

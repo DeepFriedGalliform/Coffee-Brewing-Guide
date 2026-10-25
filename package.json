@@ -1,0 +1,13 @@
+{
+  "name": "coffee-brewing-guide",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mobile pour-over brewing timer, hosted on GitHub Pages.",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i src/tailwind.css -o styles.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i src/tailwind.css -o styles.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}

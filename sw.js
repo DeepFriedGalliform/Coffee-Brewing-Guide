@@ -1,11 +1,12 @@
 // Offline support: precache the app shell, then serve everything (including the
-// Tailwind, Chart.js and font CDNs) cache-first while refreshing in the background.
+// Chart.js and font CDNs) cache-first while refreshing in the background.
 // Bump CACHE_VERSION when you change any of the files below.
-const CACHE_VERSION = 'brew-guide-v1';
+const CACHE_VERSION = 'brew-guide-v2';
 
 const APP_SHELL = [
   './',
   './index.html',
+  './styles.css',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
