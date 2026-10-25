@@ -18,8 +18,9 @@
 ## Features
 
 - **Four brew methods**: Hario V60, Hario Switch (hybrid), Hario Switch (full immersion) and Clever Dripper.
-- **One or two cups**: 15 g / 250 g or 30 g / 500 g, with timings scaled to match.
-- **Twelve coffee profiles** in three groups (Standard roasts, Pact, Regional origins), each with its own water temperature, tasting notes and a **Fellow Ode Gen 2** grind setting adjusted for method and batch size.
+- **Any dose and ratio**: 8–40 g of coffee at 1:14 to 1:19 (default 15 g at 1:16.7 = 250 g). Pour targets, flow rates, stage timings and grind scale with the amount of water.
+- **Twelve coffee profiles** in three groups (Standard roasts, Pact, Regional origins), each with its own water temperature, tasting notes and grind setting adjusted for method and batch size.
+- **Your grinder**: choose Fellow Ode Gen 2, Comandante C40, Baratza Encore, 1Zpresso K-Ultra, Knock Aergrind or Timemore Chestnut C3S Max, and every recipe shows the setting for that grinder. For anything else, add a **custom grinder** by entering its finest and coarsest settings and step size, and recipes are scaled across that range. Tap the gear icon or **change** under the title.
 - **Pre-brew checklist** with kettle temperature, dose and grind for the profile you picked.
 - **Live brew timer** with three views:
   - **Ring**: a rotating timeline with the target scale weight, flow rate, an animated dripper and the Switch valve state (open or closed).
@@ -29,7 +30,7 @@
 - **Audio and haptic cues**: a 5-second get-ready countdown, beeps for the last 4 seconds of each stage, a chime and vibration at each stage change, and a fanfare when you finish.
 - **Drawdown timing**: during the final drawdown the Pause button becomes **Done**. Tap it when the coffee stops dripping, and the completion screen compares your drawdown with the recipe and tells you whether to grind coarser, finer, or keep the same setting. If the timer runs out first, it keeps counting until you tap Done.
 - **Pause, Back and Skip** controls, a Cancel button on the countdown, and a tap-twice Cancel Brew so a stray tap can't end your brew. The screen stays awake while brewing.
-- **Works offline** once loaded, and remembers your last method, size, coffee type and view.
+- **Works offline** once loaded, and remembers your last method, dose, ratio, grinder, coffee type and view.
 
 ## Install on your phone
 
@@ -41,7 +42,7 @@
 
 ## How to use
 
-1. **Setup**: pick a brew method, cup size and coffee type, then tap a profile card.
+1. **Setup**: choose your grinder once (gear icon), then pick a brew method, dose, ratio and coffee type, and tap a profile card.
 2. **Checklist**: boil, weigh, grind, rinse the filter and prep the brewer, then check the brew summary.
 3. **Brew**: tap **Start Brew Cycle**, follow the on-screen (and spoken) instruction for each stage, and pour to the target weight shown.
 4. **Drawdown**: tap **Done** as soon as the coffee stops dripping.
@@ -87,9 +88,19 @@ Commit the updated `styles.css` together with your `index.html` changes.
 
 ## Customising
 
-- **Coffee profiles**: edit `coffeeData` in `index.html`. Each entry has a `category` (`standard`, `pact` or `regional`), display `name`, water `temp`, tasting `notes` and base Ode grind setting (`ode`).
-- **Recipes and timings**: edit `generateSteps(method, cups)`. Each step has a duration in seconds (`time`), the time spent pouring (`pourTime`), the cumulative target weight (`water`), the flow rate shown on screen, the instruction text, its `phase` (`pour`, `bloom`, `steep` or `drawdown`) and the Switch `valve` state.
-- **Grind offsets**: `getCalculatedOdeSetting` adds +0.2 for Switch hybrid, +0.5 for full immersion or Clever, and +1.0 for two cups.
+Everything lives near the top of the `<script>` in `index.html`:
+
+- **Coffee profiles** (`coffeeData`): each entry has a `category` (`standard`, `pact` or `regional`), display `name`, water `temp`, tasting `notes` and base grind `ode`, on the Fellow Ode Gen 2 dial for a 250 g V60.
+- **Recipes** (`RECIPES`): one entry per brew method, with its `grindOffset` (V60 0, Switch hybrid +0.2, full immersion and Clever +0.5) and its steps. Each step gives:
+  - `water`: the cumulative target as a fraction of the total (0.2 = 20%);
+  - `time`: `[seconds at 250 g, seconds at 500 g]`. Other sizes are interpolated, and extrapolated a little beyond that range;
+  - `pour: true` if the whole step is pouring. The flow rate is then calculated;
+  - `phase` (`pour`, `bloom`, `steep` or `drawdown`), the Switch `valve` state, and `desc`, with `{water}`, `{flow}` and `{crust}` filled in.
+- **Batch size**: grind gets 1.0 coarser on the Ode per extra 250 g of water (`GRIND_OFFSET_PER_250G`).
+- **Dose and ratio limits**: `DOSE_LIMITS` and `RATIO_OPTIONS`.
+- **Grinders** (`GRINDERS`): each preset converts from the Ode through two reference points, `anchors: [[ode, setting], [ode, setting]]`. Edit those to recalibrate a preset, or add a new grinder the same way. The custom grinder instead maps the Ode's whole 1–11 dial onto the user's finest–coarsest range.
+
+The preset conversions are approximate starting points. Use the drawdown advice after each brew to dial in.
 
 After changing any file, bump `CACHE_VERSION` in `sw.js` (for example `brew-guide-v3`) so installed copies pick up the update.
 
