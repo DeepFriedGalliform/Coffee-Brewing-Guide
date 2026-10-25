@@ -156,26 +156,31 @@
         </div>
 
         <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">DOSE &amp; RATIO</span>
-            <span id="waterReadout" class="text-[10px] font-bold text-slate-300">💧 250g water</span>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">COFFEE · WATER · RATIO</span>
+          <div class="grid grid-cols-3 gap-1.5">
             <div role="group" aria-label="Coffee dose" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
-              <button id="btnDoseDown" onclick="changeDose(-1)" aria-label="Less coffee" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
-              <div class="text-center leading-tight">
-                <span id="doseValue" class="block text-sm font-extrabold text-white font-mono" aria-live="polite">15g</span>
+              <button id="btnDoseDown" onclick="changeDose(-1)" aria-label="Less coffee" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
+              <div class="text-center leading-tight min-w-0">
+                <span id="doseValue" class="block text-[13px] font-extrabold text-white font-mono" aria-live="polite">15g</span>
                 <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Coffee</span>
               </div>
-              <button id="btnDoseUp" onclick="changeDose(1)" aria-label="More coffee" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
+              <button id="btnDoseUp" onclick="changeDose(1)" aria-label="More coffee" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
+            </div>
+            <div role="group" aria-label="Water" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
+              <button id="btnWaterDown" onclick="changeWater(-1)" aria-label="5 grams less water" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
+              <div class="text-center leading-tight min-w-0">
+                <span id="waterValue" class="block text-[13px] font-extrabold text-white font-mono" aria-live="polite">250g</span>
+                <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Water</span>
+              </div>
+              <button id="btnWaterUp" onclick="changeWater(1)" aria-label="5 grams more water" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
             </div>
             <div role="group" aria-label="Brew ratio" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
-              <button id="btnRatioDown" onclick="changeRatio(-1)" aria-label="Stronger ratio" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
-              <div class="text-center leading-tight">
-                <span id="ratioValue" class="block text-sm font-extrabold text-white font-mono" aria-live="polite">1:16.7</span>
+              <button id="btnRatioDown" onclick="changeRatio(-1)" aria-label="Stronger ratio" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
+              <div class="text-center leading-tight min-w-0">
+                <span id="ratioValue" title="Coffee to water ratio (1:x)" class="block text-[13px] font-extrabold text-white font-mono" aria-live="polite">16.7</span>
                 <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Ratio</span>
               </div>
-              <button id="btnRatioUp" onclick="changeRatio(1)" aria-label="Weaker ratio" class="w-9 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
+              <button id="btnRatioUp" onclick="changeRatio(1)" aria-label="Weaker ratio" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
             </div>
           </div>
         </div>
@@ -240,7 +245,8 @@
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
         <span id="grinderPreviewTitle" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">PREVIEW</span>
-        <div id="grinderPreview" class="flex flex-col gap-1 text-[11px]"></div>
+        <div id="grinderPreview" class="flex flex-col gap-1.5 text-[11px]"></div>
+        <p id="calibrationNote" class="text-[10px] text-slate-400 leading-relaxed mt-1"></p>
       </div>
     </div>
 
@@ -639,7 +645,7 @@
     let prevWater = 0;
     return recipe.steps.map(t => {
       const time = Math.max(3, Math.round(t.time[0] + (t.time[1] - t.time[0]) * scale));
-      const stepWater = Math.round(water * t.water);
+      const stepWater = t.water === 1 ? water : Math.round(water * t.water / WATER_STEP) * WATER_STEP;
       const pourTime = t.pour ? time : 0;
       const flow = t.pour ? `${((stepWater - prevWater) / pourTime).toFixed(1)} g/s` : t.flow;
       // Break the crust about 70% of the way through the steep, on a 15-second mark
@@ -651,12 +657,20 @@
   }
 
   /* ---------- Dose & ratio ---------- */
+  /* Water is always a multiple of WATER_STEP. The ratio stepper moves in RATIO_LIMITS.step increments. */
   const DOSE_LIMITS = { min: 8, max: 40 };
-  const RATIO_OPTIONS = [14, 14.5, 15, 15.5, 16, 16.5, 50 / 3, 17, 17.5, 18, 18.5, 19];
-  const DEFAULT_RATIO_INDEX = RATIO_OPTIONS.indexOf(50 / 3);
+  const WATER_STEP = 5;
+  const WATER_LIMITS = { min: 100, max: 800 };
+  const RATIO_LIMITS = { min: 14, max: 19, step: 0.5 };
+  const DEFAULT_RATIO = 50 / 3; // 15 g : 250 g
 
-  function formatRatio(ratio) {
-    return `1:${Number.isInteger(ratio) ? ratio : ratio.toFixed(1)}`;
+  function roundWater(grams) {
+    const rounded = Math.round(grams / WATER_STEP) * WATER_STEP;
+    return Math.min(WATER_LIMITS.max, Math.max(WATER_LIMITS.min, rounded));
+  }
+
+  function formatRatioValue(ratio) {
+    return String(Number(ratio.toFixed(1)));
   }
 
   /* ---------- Grinders ----------
@@ -691,9 +705,10 @@
   /* The active grinder as { name, unit, step, min (finest), max (coarsest), anchors?, describe? } */
   function getGrinder() {
     if (currentGrinderKey === 'custom') {
-      return { ...GRINDERS.custom, name: customGrinder.name.trim() || GRINDERS.custom.name, step: customGrinder.step, min: customGrinder.finest, max: customGrinder.coarsest, describe: v => `setting ${v}` };
+      return { ...GRINDERS.custom, key: 'custom', name: customGrinder.name.trim() || GRINDERS.custom.name, step: customGrinder.step, min: customGrinder.finest, max: customGrinder.coarsest, describe: v => `setting ${v}` };
     }
-    return GRINDERS[currentGrinderKey] || GRINDERS.ode2;
+    const key = GRINDERS[currentGrinderKey] ? currentGrinderKey : 'ode2';
+    return { ...GRINDERS[key], key };
   }
 
   function stepDecimals(step) {
@@ -710,13 +725,52 @@
     return Number(Math.min(hi, Math.max(lo, snapped)).toFixed(stepDecimals(grinder.step)));
   }
 
-  function convertFromOde(odeValue, grinder = getGrinder()) {
-    let value;
+  /* The built-in conversion, before calibration or snapping */
+  function defaultConvert(odeValue, grinder) {
     if (grinder.anchors) {
       const [[ode1, g1], [ode2, g2]] = grinder.anchors;
-      value = g1 + (odeValue - ode1) * (g2 - g1) / (ode2 - ode1);
+      return g1 + (odeValue - ode1) * (g2 - g1) / (ode2 - ode1);
+    }
+    return grinder.min + (odeValue - ODE_DIAL.min) / (ODE_DIAL.max - ODE_DIAL.min) * (grinder.max - grinder.min);
+  }
+
+  /* ---------- Grind calibration ----------
+     The user can enter their own setting for any coffee in the Settings preview. Each entry is stored per grinder
+     as a point { ode, value }, where ode is that recipe's Ode setting when it was entered. Conversions pass exactly
+     through the points (straight lines between them) and follow the grinder's default slope outside them, so a
+     single entry shifts every recipe by the same amount. */
+  let grindCalibration = (() => {
+    try { return JSON.parse(localStorage.getItem('bg_grind_calibration')) || {}; } catch (e) { return {}; }
+  })();
+
+  function saveGrindCalibration() {
+    localStorage.setItem('bg_grind_calibration', JSON.stringify(grindCalibration));
+  }
+
+  /* Calibration points for a grinder, sorted by Ode value; entries at the same Ode value are averaged */
+  function getCalibrationPoints(grinderKey) {
+    const byOde = {};
+    Object.values(grindCalibration[grinderKey] || {}).forEach(({ ode, value }) => {
+      const key = ode.toFixed(2);
+      (byOde[key] = byOde[key] || []).push(value);
+    });
+    return Object.entries(byOde)
+      .map(([ode, values]) => ({ ode: Number(ode), value: values.reduce((a, b) => a + b, 0) / values.length }))
+      .sort((a, b) => a.ode - b.ode);
+  }
+
+  function convertFromOde(odeValue, grinder = getGrinder()) {
+    const points = getCalibrationPoints(grinder.key);
+    let value;
+    if (points.length === 0) {
+      value = defaultConvert(odeValue, grinder);
+    } else if (odeValue <= points[0].ode || odeValue >= points[points.length - 1].ode) {
+      const end = odeValue <= points[0].ode ? points[0] : points[points.length - 1];
+      value = end.value + defaultConvert(odeValue, grinder) - defaultConvert(end.ode, grinder);
     } else {
-      value = grinder.min + (odeValue - ODE_DIAL.min) / (ODE_DIAL.max - ODE_DIAL.min) * (grinder.max - grinder.min);
+      const i = points.findIndex((p, idx) => odeValue >= p.ode && odeValue < points[idx + 1].ode);
+      const a = points[i], b = points[i + 1];
+      value = a.value + (odeValue - a.ode) * (b.value - a.value) / (b.ode - a.ode);
     }
     return snapToGrinder(value, grinder);
   }
@@ -761,11 +815,10 @@
   let currentMethod = localStorage.getItem('bg_method') || 'v60';
   // bg_cups is the old 1/2-cup setting; use it as the starting dose for anyone upgrading
   let currentDose = parseInt(localStorage.getItem('bg_dose')) || (localStorage.getItem('bg_cups') === '2' ? 30 : 15);
-  let currentRatioIndex = (() => {
-    const saved = parseFloat(localStorage.getItem('bg_ratio'));
-    const index = RATIO_OPTIONS.findIndex(r => Math.abs(r - saved) < 0.01);
-    return index >= 0 ? index : DEFAULT_RATIO_INDEX;
-  })();
+  // The ratio last chosen with the ratio or water stepper. Dose changes keep this ratio, so it doesn't drift
+  // as water is re-rounded to 5 g.
+  let targetRatio = parseFloat(localStorage.getItem('bg_ratio')) || DEFAULT_RATIO;
+  let currentWater = parseInt(localStorage.getItem('bg_water')) || roundWater(currentDose * targetRatio);
   let currentGrinderKey = GRINDERS[localStorage.getItem('bg_grinder')] ? localStorage.getItem('bg_grinder') : 'ode2';
   let customGrinder = loadCustomGrinder();
   let currentCoffeeType = localStorage.getItem('bg_type') || 'standard';
@@ -1005,33 +1058,67 @@
   }
 
   function getWater() {
-    return Math.round(currentDose * RATIO_OPTIONS[currentRatioIndex]);
+    return currentWater;
+  }
+
+  function getRatio() {
+    return currentWater / currentDose;
   }
 
   function updateBrewSizeUI() {
+    const ratio = getRatio();
     document.getElementById('doseValue').innerText = `${currentDose}g`;
-    document.getElementById('ratioValue').innerText = formatRatio(RATIO_OPTIONS[currentRatioIndex]);
-    document.getElementById('waterReadout').innerText = `💧 ${getWater()}g water`;
+    document.getElementById('waterValue').innerText = `${currentWater}g`;
+    document.getElementById('ratioValue').innerText = formatRatioValue(ratio);
     document.getElementById('btnDoseDown').disabled = currentDose <= DOSE_LIMITS.min;
     document.getElementById('btnDoseUp').disabled = currentDose >= DOSE_LIMITS.max;
-    document.getElementById('btnRatioDown').disabled = currentRatioIndex <= 0;
-    document.getElementById('btnRatioUp').disabled = currentRatioIndex >= RATIO_OPTIONS.length - 1;
+    document.getElementById('btnWaterDown').disabled = currentWater <= WATER_LIMITS.min;
+    document.getElementById('btnWaterUp').disabled = currentWater >= WATER_LIMITS.max;
+    document.getElementById('btnRatioDown').disabled = ratio <= RATIO_LIMITS.min + 1e-9 || currentWater <= WATER_LIMITS.min;
+    document.getElementById('btnRatioUp').disabled = ratio >= RATIO_LIMITS.max - 1e-9 || currentWater >= WATER_LIMITS.max;
   }
 
+  function saveBrewSize() {
+    localStorage.setItem('bg_dose', currentDose);
+    localStorage.setItem('bg_water', currentWater);
+    localStorage.setItem('bg_ratio', targetRatio);
+    updateBrewSizeUI();
+    renderCoffeeProfileCards();
+  }
+
+  /* Dose changes keep the ratio and recalculate the water */
   function changeDose(delta) {
     triggerHapticFeedback();
     currentDose = Math.min(DOSE_LIMITS.max, Math.max(DOSE_LIMITS.min, currentDose + delta));
-    localStorage.setItem('bg_dose', currentDose);
-    updateBrewSizeUI();
-    renderCoffeeProfileCards();
+    currentWater = roundWater(currentDose * targetRatio);
+    saveBrewSize();
   }
 
-  function changeRatio(delta) {
+  /* Water moves in 5 g steps; the ratio follows */
+  function changeWater(delta) {
     triggerHapticFeedback();
-    currentRatioIndex = Math.min(RATIO_OPTIONS.length - 1, Math.max(0, currentRatioIndex + delta));
-    localStorage.setItem('bg_ratio', RATIO_OPTIONS[currentRatioIndex]);
-    updateBrewSizeUI();
-    renderCoffeeProfileCards();
+    currentWater = roundWater(currentWater + delta * WATER_STEP);
+    targetRatio = getRatio();
+    saveBrewSize();
+  }
+
+  /* Ratio moves to the next 0.5 mark, skipping marks that round to the same (5 g) water */
+  function changeRatio(direction) {
+    triggerHapticFeedback();
+    const steps = getRatio() / RATIO_LIMITS.step;
+    let ratio = (direction > 0 ? Math.floor(steps + 1e-9) + 1 : Math.ceil(steps - 1e-9) - 1) * RATIO_LIMITS.step;
+    for (;;) {
+      ratio = Math.min(RATIO_LIMITS.max, Math.max(RATIO_LIMITS.min, ratio));
+      const water = roundWater(currentDose * ratio);
+      const atLimit = ratio === RATIO_LIMITS.min || ratio === RATIO_LIMITS.max;
+      if (water !== currentWater || atLimit) {
+        currentWater = water;
+        targetRatio = ratio;
+        break;
+      }
+      ratio += direction * RATIO_LIMITS.step;
+    }
+    saveBrewSize();
   }
 
   function setCoffeeType(type) {
@@ -1210,22 +1297,62 @@
     renderGrinderPreview();
   }
 
-  /* Shows what the current method, dose and coffee type convert to on the chosen grinder */
+  /* Shows what the current method, dose and coffee type convert to on the chosen grinder.
+     Each setting is an input: typing your own value adds a calibration point for this grinder. */
   function renderGrinderPreview() {
     const grinder = getGrinder();
     document.getElementById('grinderPreviewTitle').innerText =
       `PREVIEW · ${(RECIPES[currentMethod] || RECIPES.v60).name} · ${currentDose}g / ${getWater()}g`;
     const preview = document.getElementById('grinderPreview');
     preview.innerHTML = '';
+    const saved = grindCalibration[grinder.key] || {};
     Object.keys(coffeeData).filter(key => coffeeData[key].category === currentCoffeeType).forEach(key => {
-      const odeText = getOdeSetting(key).toFixed(1);
+      const ode = getOdeSetting(key);
+      const entry = saved[key];
+      const enteredHere = entry && Math.abs(entry.ode - ode) < 0.005;
+      const converted = formatGrind(convertFromOde(ode, grinder), grinder);
       const row = document.createElement('div');
-      row.className = "flex items-center justify-between gap-2 border-b border-borderDark/60 pb-1 last:border-0";
+      row.className = "flex items-center justify-between gap-2 border-b border-borderDark/60 pb-1.5 last:border-0";
       row.innerHTML = `
-        <span class="text-slate-300 truncate">${coffeeData[key].name}</span>
-        <span class="shrink-0 font-mono font-bold text-white">${currentGrinderKey === 'ode2' ? odeText : `<span class="text-slate-500">Ode ${odeText} →</span> ${describeGrind(convertFromOde(getOdeSetting(key), grinder), grinder)}`}</span>`;
+        <span class="flex items-center gap-1 min-w-0">
+          <span class="text-slate-300 truncate">${coffeeData[key].name}</span>
+          ${entry ? `<span class="shrink-0 text-bronze" title="${enteredHere ? 'Your setting' : 'Your setting, entered for a different method or size'}">●</span>` : ''}
+        </span>
+        <span class="shrink-0 flex items-center gap-1.5 font-mono font-bold">
+          ${grinder.key === 'ode2' ? '' : `<span class="text-slate-500">Ode ${ode.toFixed(1)} →</span>`}
+          <input type="number" inputmode="decimal" step="any" aria-label="Your ${grinder.name} setting for ${coffeeData[key].name}"
+            value="${enteredHere ? formatGrind(entry.value, grinder) : ''}" placeholder="${converted}"
+            onchange="setGrindOverride('${key}', this.value)"
+            class="w-[4.5rem] bg-darkBg border ${enteredHere ? 'border-bronze text-bronze' : 'border-borderDark text-white'} rounded-lg px-2 py-1 text-base text-right placeholder:text-slate-400 focus:outline-none focus:border-bronze">
+        </span>`;
       preview.appendChild(row);
     });
+
+    const count = Object.keys(saved).length;
+    document.getElementById('calibrationNote').innerHTML = count
+      ? `Scaling every recipe from <strong class="text-bronze">${count} of your settings</strong> for this grinder. <button onclick="resetGrindCalibration()" class="underline underline-offset-2 text-slate-300 hover:text-white">Reset</button>`
+      : `Know the setting you use for one of these coffees? Type it in, and every other recipe for this grinder will be scaled from your numbers.`;
+  }
+
+  function setGrindOverride(coffeeKey, rawValue) {
+    const grinderKey = getGrinder().key;
+    const value = parseFloat(rawValue);
+    const points = grindCalibration[grinderKey] = grindCalibration[grinderKey] || {};
+    if (String(rawValue).trim() === '' || !Number.isFinite(value)) {
+      delete points[coffeeKey];
+    } else {
+      points[coffeeKey] = { ode: Number(getOdeSetting(coffeeKey).toFixed(2)), value };
+    }
+    if (!Object.keys(points).length) delete grindCalibration[grinderKey];
+    saveGrindCalibration();
+    renderGrinderPreview();
+  }
+
+  function resetGrindCalibration() {
+    triggerHapticFeedback();
+    delete grindCalibration[getGrinder().key];
+    saveGrindCalibration();
+    renderGrinderPreview();
   }
 
   function goToSetupScreen() {

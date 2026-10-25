@@ -18,9 +18,13 @@
 ## Features
 
 - **Four brew methods**: Hario V60, Hario Switch (hybrid), Hario Switch (full immersion) and Clever Dripper.
-- **Any dose and ratio**: 8–40 g of coffee at 1:14 to 1:19 (default 15 g at 1:16.7 = 250 g). Pour targets, flow rates, stage timings and grind scale with the amount of water.
+- **Any dose, water and ratio**: 8–40 g of coffee and 100–800 g of water (default 15 g / 250 g, 1:16.7).
+  - Water moves in 5 g steps and the ratio follows. The ratio moves in 0.5 steps and the water follows, always landing on a multiple of 5 g. Changing the dose keeps your ratio.
+  - Every pour target is a multiple of 5 g.
+  - Flow rates, stage timings and grind scale with the amount of water.
 - **Twelve coffee profiles** in three groups (Standard roasts, Pact, Regional origins), each with its own water temperature, tasting notes and grind setting adjusted for method and batch size.
 - **Your grinder**: choose Fellow Ode Gen 2, Comandante C40, Baratza Encore, 1Zpresso K-Ultra, Knock Aergrind or Timemore Chestnut C3S Max, and every recipe shows the setting for that grinder. For anything else, add a **custom grinder** by entering its finest and coarsest settings and step size, and recipes are scaled across that range. Tap the gear icon or **change** under the title.
+- **Calibrate to your own settings**: in Settings, type the setting you actually use for any of the listed coffees. Every other recipe for that grinder, including other methods and brew sizes, is then scaled from your numbers. Enter one coffee to shift everything, or several to fine-tune; **Reset** clears them.
 - **Pre-brew checklist** with kettle temperature, dose and grind for the profile you picked.
 - **Live brew timer** with three views:
   - **Ring**: a rotating timeline with the target scale weight, flow rate, an animated dripper and the Switch valve state (open or closed).
@@ -97,8 +101,10 @@ Everything lives near the top of the `<script>` in `index.html`:
   - `pour: true` if the whole step is pouring. The flow rate is then calculated;
   - `phase` (`pour`, `bloom`, `steep` or `drawdown`), the Switch `valve` state, and `desc`, with `{water}`, `{flow}` and `{crust}` filled in.
 - **Batch size**: grind gets 1.0 coarser on the Ode per extra 250 g of water (`GRIND_OFFSET_PER_250G`).
-- **Dose and ratio limits**: `DOSE_LIMITS` and `RATIO_OPTIONS`.
+- **Dose, water and ratio**: `DOSE_LIMITS`, `WATER_LIMITS`, `WATER_STEP` (5 g) and `RATIO_LIMITS`.
 - **Grinders** (`GRINDERS`): each preset converts from the Ode through two reference points, `anchors: [[ode, setting], [ode, setting]]`. Edit those to recalibrate a preset, or add a new grinder the same way. The custom grinder instead maps the Ode's whole 1–11 dial onto the user's finest–coarsest range.
+
+Settings you enter yourself are stored as calibration points for that grinder. Conversions pass through them, with straight lines between them, and follow the grinder's normal slope beyond them.
 
 The preset conversions are approximate starting points. Use the drawdown advice after each brew to dial in.
 
