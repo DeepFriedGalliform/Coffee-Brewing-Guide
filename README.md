@@ -20,6 +20,7 @@
 - **Four brew methods**: Hario V60, Hario Switch (hybrid), Hario Switch (full immersion) and Clever Dripper.
 - **Any dose, water and ratio**: 8–40 g of coffee and 100–800 g of water (default 15 g / 250 g, 1:16.7).
   - Water moves in 5 g steps and the ratio follows. The ratio moves in 0.5 steps and the water follows, always landing on a multiple of 5 g. Changing the dose keeps your ratio.
+  - Tap a value to type it, or drag sideways on it to scrub. **×1** / **×2** jump to 15 g or 30 g at your current ratio (250 g / 500 g at the default).
   - Every pour target is a multiple of 5 g.
   - Flow rates, stage timings and grind scale with the amount of water.
 - **Twelve coffee profiles** in three groups (Standard roasts, Pact, Regional origins), each with its own water temperature, tasting notes and grind setting adjusted for method and batch size.
