@@ -38,6 +38,10 @@
     }
 
     input { user-select: text; -webkit-user-select: text; }
+    /* No spinner arrows on number inputs: the app has its own − / + buttons */
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
     .custom-scrollbar::-webkit-scrollbar {
       width: 5px;
@@ -156,28 +160,34 @@
         </div>
 
         <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">COFFEE · WATER · RATIO</span>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">COFFEE · WATER · RATIO</span>
+            <div role="group" aria-label="Quick brew size" class="flex gap-1">
+              <button id="btnCups1" onclick="setCups(1)" aria-label="1 cup, 15 grams" class="px-2 py-1 rounded-md text-[10px] font-extrabold leading-none transition-all active:scale-95">×1</button>
+              <button id="btnCups2" onclick="setCups(2)" aria-label="2 cups, 30 grams" class="px-2 py-1 rounded-md text-[10px] font-extrabold leading-none transition-all active:scale-95">×2</button>
+            </div>
+          </div>
           <div class="grid grid-cols-3 gap-1.5">
             <div role="group" aria-label="Coffee dose" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
               <button id="btnDoseDown" onclick="changeDose(-1)" aria-label="Less coffee" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
-              <div class="text-center leading-tight min-w-0">
-                <span id="doseValue" class="block text-[13px] font-extrabold text-white font-mono" aria-live="polite">15g</span>
+              <div data-brew-field="dose" role="button" tabindex="0" title="Tap to type, or drag sideways to adjust" aria-label="Coffee dose in grams: tap to type, or use arrow keys" class="text-center leading-tight min-w-0 flex-1 cursor-ew-resize select-none rounded-md py-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-bronze" style="touch-action: pan-y">
+                <span id="doseValue" class="block text-[13px] font-extrabold text-white font-mono underline decoration-dotted decoration-slate-500 underline-offset-[3px]" aria-live="polite">15g</span>
                 <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Coffee</span>
               </div>
               <button id="btnDoseUp" onclick="changeDose(1)" aria-label="More coffee" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
             </div>
             <div role="group" aria-label="Water" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
               <button id="btnWaterDown" onclick="changeWater(-1)" aria-label="5 grams less water" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
-              <div class="text-center leading-tight min-w-0">
-                <span id="waterValue" class="block text-[13px] font-extrabold text-white font-mono" aria-live="polite">250g</span>
+              <div data-brew-field="water" role="button" tabindex="0" title="Tap to type, or drag sideways to adjust" aria-label="Water in grams: tap to type, or use arrow keys" class="text-center leading-tight min-w-0 flex-1 cursor-ew-resize select-none rounded-md py-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-bronze" style="touch-action: pan-y">
+                <span id="waterValue" class="block text-[13px] font-extrabold text-white font-mono underline decoration-dotted decoration-slate-500 underline-offset-[3px]" aria-live="polite">250g</span>
                 <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Water</span>
               </div>
               <button id="btnWaterUp" onclick="changeWater(1)" aria-label="5 grams more water" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
             </div>
             <div role="group" aria-label="Brew ratio" class="flex items-center justify-between bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner">
               <button id="btnRatioDown" onclick="changeRatio(-1)" aria-label="Stronger ratio" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">−</button>
-              <div class="text-center leading-tight min-w-0">
-                <span id="ratioValue" title="Coffee to water ratio (1:x)" class="block text-[13px] font-extrabold text-white font-mono" aria-live="polite">16.7</span>
+              <div data-brew-field="ratio" role="button" tabindex="0" title="Tap to type, or drag sideways to adjust" aria-label="Brew ratio, 1 to: tap to type, or use arrow keys" class="text-center leading-tight min-w-0 flex-1 cursor-ew-resize select-none rounded-md py-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-bronze" style="touch-action: pan-y">
+                <span id="ratioValue" title="Coffee to water ratio (1:x)" class="block text-[13px] font-extrabold text-white font-mono underline decoration-dotted decoration-slate-500 underline-offset-[3px]" aria-live="polite">16.7</span>
                 <span class="block text-[9px] uppercase tracking-wider text-slate-500 font-bold">Ratio</span>
               </div>
               <button id="btnRatioUp" onclick="changeRatio(1)" aria-label="Weaker ratio" class="w-6 min-[400px]:w-8 h-9 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-95 transition-all text-lg font-bold leading-none disabled:opacity-30 disabled:pointer-events-none">+</button>
@@ -1076,6 +1086,99 @@
     document.getElementById('btnWaterUp').disabled = currentWater >= WATER_LIMITS.max;
     document.getElementById('btnRatioDown').disabled = ratio <= RATIO_LIMITS.min + 1e-9 || currentWater <= WATER_LIMITS.min;
     document.getElementById('btnRatioUp').disabled = ratio >= RATIO_LIMITS.max - 1e-9 || currentWater >= WATER_LIMITS.max;
+    const activeChip = "px-2 py-1 rounded-md text-[10px] font-extrabold leading-none transition-all active:scale-95 bg-bronze text-slate-950 shadow-depth-button";
+    const inactiveChip = "px-2 py-1 rounded-md text-[10px] font-extrabold leading-none transition-all active:scale-95 border border-borderDark text-slate-400 hover:text-white";
+    applyToggle({ 1: 'btnCups1', 2: 'btnCups2' }, currentDose / CUP_DOSE, activeChip, inactiveChip);
+  }
+
+  /* Coffee / Water / Ratio values: tap to type, drag sideways to scrub (one stepper press per SCRUB_STEP_PX) */
+  const BREW_FIELDS = {
+    dose: { change: d => changeDose(d), set: setDose, value: () => currentDose, decimal: false },
+    water: { change: d => changeWater(d), set: setWater, value: () => currentWater, decimal: false },
+    ratio: { change: d => changeRatio(d), set: setRatio, value: () => Number(getRatio().toFixed(1)), decimal: true }
+  };
+  const SCRUB_STEP_PX = 14;
+
+  function initBrewFieldControls() {
+    document.querySelectorAll('[data-brew-field]').forEach(el => {
+      const field = BREW_FIELDS[el.dataset.brewField];
+      let startX = null;
+      let applied = 0;
+      let scrubbed = false;
+
+      el.addEventListener('pointerdown', e => {
+        if (e.target.tagName === 'INPUT') return;
+        startX = e.clientX;
+        applied = 0;
+        scrubbed = false;
+        el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener('pointermove', e => {
+        if (startX === null) return;
+        const dx = e.clientX - startX;
+        if (!scrubbed && Math.abs(dx) < 6) return;
+        scrubbed = true;
+        const steps = Math.trunc(dx / SCRUB_STEP_PX);
+        while (applied < steps) { field.change(1); applied++; }
+        while (applied > steps) { field.change(-1); applied--; }
+      });
+      const endScrub = () => { startX = null; };
+      el.addEventListener('pointerup', endScrub);
+      el.addEventListener('pointercancel', endScrub);
+
+      el.addEventListener('click', e => {
+        if (e.target.tagName === 'INPUT') return;
+        if (scrubbed) {
+          scrubbed = false;
+          return;
+        }
+        editBrewField(el, field);
+      });
+      el.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); field.change(1); }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); field.change(-1); }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); editBrewField(el, field); }
+      });
+    });
+  }
+
+  /* Swap the value for a number input (hiding the − / + buttons so it has room) until Enter, blur or Escape */
+  function editBrewField(el, field) {
+    if (el.querySelector('input')) return;
+    triggerHapticFeedback();
+    const valueText = el.querySelector('[aria-live]');
+    const stepButtons = el.parentElement.querySelectorAll(':scope > button');
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.inputMode = field.decimal ? 'decimal' : 'numeric';
+    input.step = 'any';
+    input.value = field.value();
+    input.setAttribute('aria-label', el.getAttribute('aria-label').split(':')[0]);
+    input.className = "w-full bg-darkBg border border-bronze rounded-md text-center text-base font-extrabold text-white font-mono leading-tight py-0.5 focus:outline-none";
+
+    let finished = false;
+    const finish = (commit) => {
+      if (finished) return;
+      finished = true;
+      const typed = parseFloat(input.value);
+      input.remove();
+      valueText.classList.remove('hidden');
+      stepButtons.forEach(b => b.classList.remove('hidden'));
+      if (commit && Number.isFinite(typed) && typed > 0) field.set(typed);
+      else updateBrewSizeUI();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); el.focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); el.focus(); }
+    });
+    input.addEventListener('blur', () => finish(true));
+
+    valueText.classList.add('hidden');
+    stepButtons.forEach(b => b.classList.add('hidden'));
+    valueText.after(input);
+    input.focus();
+    input.select();
   }
 
   function saveBrewSize() {
@@ -1084,6 +1187,33 @@
     localStorage.setItem('bg_ratio', targetRatio);
     updateBrewSizeUI();
     renderCoffeeProfileCards();
+  }
+
+  /* Typed values: dose keeps the ratio, water sets the ratio, ratio sets the water */
+  function setDose(grams) {
+    currentDose = Math.min(DOSE_LIMITS.max, Math.max(DOSE_LIMITS.min, Math.round(grams)));
+    currentWater = roundWater(currentDose * targetRatio);
+    saveBrewSize();
+  }
+
+  function setWater(grams) {
+    currentWater = roundWater(grams);
+    targetRatio = getRatio();
+    saveBrewSize();
+  }
+
+  function setRatio(ratio) {
+    targetRatio = Math.min(RATIO_LIMITS.max, Math.max(RATIO_LIMITS.min, ratio));
+    currentWater = roundWater(currentDose * targetRatio);
+    saveBrewSize();
+  }
+
+  /* ×1 / ×2: 15 g or 30 g at the current ratio (250 g / 500 g at the default ratio) */
+  const CUP_DOSE = 15;
+
+  function setCups(cups) {
+    triggerHapticFeedback();
+    setDose(CUP_DOSE * cups);
   }
 
   /* Dose changes keep the ratio and recalculate the water */
@@ -2106,6 +2236,7 @@
   updateVoiceButton();
   document.getElementById('grinderChipName').innerText = getGrinder().name;
   updateBrewSizeUI();
+  initBrewFieldControls();
   setBrewMethod(currentMethod);
   setCoffeeType(currentCoffeeType);
 </script>
