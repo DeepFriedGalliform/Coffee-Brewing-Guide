@@ -112,6 +112,9 @@
     .reduce-motion .pour-glow, .reduce-motion .animate-pulse { animation: none; }
     .reduce-motion .screen-view, .reduce-motion #ringSvg, .reduce-motion #unifiedStatusBubble { transition: none; }
     .reduce-motion #ringMarker { display: none; }
+    /* The ring view's brewer turns over when the inverted AeroPress is flipped */
+    .brewer-body { transform-box: view-box; transform-origin: 80px 66px; }
+    .brewer-body.flipping { transition: transform 0.8s ease-in-out; }
 
     /* Large text setting: every small size steps up, and the brew timer and instructions get bigger */
     .text-large .text-\[9px\] { font-size: 11px; }
@@ -636,6 +639,7 @@
                     </linearGradient>
                   </defs>
 
+                  <g id="brewerBody" class="brewer-body">
                   <!-- Inner Water Fill with Fluid Wave Top -->
                   <g clip-path="url(#dripperClip)">
                     <path id="filterWaterPath" d="M 0 120 L 160 120 L 160 120 L 0 120 Z" fill="url(#waterDepthGrad)" class="opacity-95" />
@@ -644,14 +648,15 @@
                   <!-- Outer Conical Dripper Outline -->
                   <polygon id="brewerOutline" points="22,18 138,18 92,112 68,112" fill="none" stroke="#D4A373" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
 
-                  <!-- AeroPress plunger, shown while pressing -->
-                  <g id="brewerPlunger" style="display: none">
-                    <rect x="76" y="-34" width="8" height="34" rx="2" fill="#D4A373" />
-                    <rect x="52" y="-4" width="56" height="8" rx="3" fill="#D4A373" />
-                  </g>
-                  
+                  <!-- French press handle -->
+                  <path id="brewerHandle" d="M 121 36 H 132 Q 138 36 138 42 V 84 Q 138 90 132 90 H 121" fill="none" stroke="#D4A373" stroke-width="5" stroke-linecap="round" style="display: none" />
+
+                  <!-- Plunger (AeroPress and French press), drawn by setBrewerShape and moved by updateLiveRingView -->
+                  <g id="brewerPlunger" style="display: none"></g>
+
                   <!-- Dripper Stand Base Bar -->
                   <rect id="brewerBase" x="36" y="112" width="88" height="8" rx="4" fill="#D4A373" />
+                  </g>
                 </svg>
 
                 <!-- Center Cumulative Target Weight Badge -->
@@ -955,8 +960,20 @@
       steps: [
         { label: "Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [10, 15], pour: true, desc: "With the AeroPress upside down, pour all the water, {water}g, over the coffee." },
         { label: "Stir & Steep", phaseName: "Immersion Steep", phase: "steep", water: 1, time: [90, 90], flow: "Steeping", desc: "Stir three times, fit the cap with a rinsed filter, and let it steep." },
-        { label: "Flip", phaseName: "Flip", phase: "bloom", water: 1, time: [15, 15], flow: "Flip", desc: "Carefully flip the AeroPress onto your mug." },
+        { label: "Flip", phaseName: "Flip", phase: "bloom", water: 1, time: [15, 15], flow: "Flip", flip: true, desc: "Carefully flip the AeroPress onto your mug." },
         { label: "Press", phaseName: "Press", phase: "drawdown", water: 1, time: [30, 40], flow: "Press", desc: "Press gently and steadily all the way down." }
+      ]
+    },
+    // James Hoffmann's method: a long steep, skim, then a long settle so the cup is clean without pressing hard
+    french_press: {
+      name: 'French Press',
+      grindOffset: 2.0,
+      steps: [
+        { label: "Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [10, 15], pour: true, desc: "Pour all the water, {water}g, over the coffee." },
+        { label: "Steep", phaseName: "Immersion Steep", phase: "steep", water: 1, time: [240, 240], flow: "Steeping", desc: "Put the lid on with the plunger up, and let it steep." },
+        { label: "Break & Skim", phaseName: "Break & Skim", phase: "bloom", water: 1, time: [30, 40], flow: "Skim", lidOff: true, desc: "Take the lid off, stir the crust on top, and spoon off the foam and floating grounds." },
+        { label: "Settle", phaseName: "Settle", phase: "bloom", water: 1, time: [300, 300], flow: "Settling", desc: "Put the lid back on with the plunger up, and let the grounds sink." },
+        { label: "Press & Pour", phaseName: "Press & Pour", phase: "drawdown", water: 1, time: [20, 30], flow: "Pour", desc: "Lower the plunger just to the surface, then pour slowly, leaving the last bit in the pot." }
       ]
     }
   };
@@ -982,7 +999,7 @@
       const crust = formatTime(Math.round(time * 0.7 / 15) * 15).replace(/^0/, '');
       const desc = t.desc.replace('{water}', stepWater).replace('{flow}', flow).replace('{crust}', crust);
       prevWater = stepWater;
-      return { phaseName: t.phaseName, time, pourTime, water: stepWater, flow, desc, phase: t.phase, label: t.label, valve: t.valve || null };
+      return { phaseName: t.phaseName, time, pourTime, water: stepWater, flow, desc, phase: t.phase, label: t.label, valve: t.valve || null, flip: !!t.flip, lidOff: !!t.lidOff };
     });
   }
 
@@ -993,9 +1010,9 @@
      built-in ones. They're added to RECIPES as "recipe_<id>". */
   const RECIPE_PREFIX = 'recipe_';
   // The order the Brew Method picker steps through (your own recipes come after these)
-  const BUILT_IN_METHODS = ['v60', 'hoffmann_v60', 'kasuya_46', 'kalita', 'chemex', 'switch_hybrid', 'switch_immersion', 'clever', 'aeropress', 'aeropress_inverted'];
+  const BUILT_IN_METHODS = ['v60', 'hoffmann_v60', 'kasuya_46', 'kalita', 'chemex', 'switch_hybrid', 'switch_immersion', 'clever', 'aeropress', 'aeropress_inverted', 'french_press'];
   // The methods a recipe can behave like (valve prompts, prep steps, wording); ready-made recipes name theirs as `base`
-  const METHOD_FAMILIES = ['v60', 'switch_hybrid', 'switch_immersion', 'clever', 'aeropress'];
+  const METHOD_FAMILIES = ['v60', 'switch_hybrid', 'switch_immersion', 'clever', 'aeropress', 'french_press'];
   const RECIPE_PHASES = { pour: 'Pour', bloom: 'Rest', steep: 'Steep', drawdown: 'Drawdown' };
   const RECIPE_STEP_DEFAULTS = {
     pour: { phaseName: 'Active Pour', flow: null, desc: 'Pour to {water}g at around {flow}.' },
@@ -1372,9 +1389,26 @@
     return getMethodFamily(method) === 'aeropress';
   }
 
+  /* AeroPress and French press hold all the water until the end, so it doesn't drain during their rests */
+  function isImmersionBrewer(method = currentMethod) {
+    return ['aeropress', 'french_press'].includes(getMethodFamily(method));
+  }
+
+  /* How the last step ends: drippers drain, the AeroPress is pressed, the French press is poured out */
+  const BREW_FINISHES = {
+    drain: { cue: 'when it stops dripping', still: 'Still Draining?', noun: 'drawdown' },
+    press: { cue: 'when the plunger is all the way down', still: 'Still Pressing?', noun: 'press' },
+    pour: { cue: "when you've poured the coffee", still: 'Still Pouring?', noun: 'pour' }
+  };
+
+  function getBrewFinish(method = currentMethod) {
+    if (isPressMethod(method)) return BREW_FINISHES.press;
+    return getMethodFamily(method) === 'french_press' ? BREW_FINISHES.pour : BREW_FINISHES.drain;
+  }
+
   /* "when it stops dripping", for "Tap Done …" */
   function finishCue(method = currentMethod) {
-    return isPressMethod(method) ? 'when the plunger is all the way down' : 'when it stops dripping';
+    return getBrewFinish(method).cue;
   }
 
   /* Short spoken cue for the start of a step, e.g. "Close the valve. Steep Pour. Pour to 250 grams." */
@@ -1391,6 +1425,7 @@
     if (s.pourTime > 0) return `${valveCue}${s.label}. Pour to ${s.water} grams.`;
     if (s.phase === 'drawdown') {
       if (family === 'aeropress') return 'Press gently and steadily. Tap Done when the plunger is all the way down.';
+      if (family === 'french_press') return "Lower the plunger to the surface, then pour slowly. Tap Done when you've poured the coffee.";
       if (family === 'clever') return 'Place the dripper on your cup to drain. Tap Done when it stops dripping.';
       return `${valveCue}Drawdown. Tap Done when it stops dripping.`;
     }
@@ -1916,6 +1951,9 @@
     } else if (family === 'aeropress') {
       step5Title.innerText = "Assemble on Your Mug & Add Coffee";
       step5Desc.innerText = "Fit a rinsed paper filter, stand the AeroPress on your mug, add the ground coffee, and tare the scale to 0.0g.";
+    } else if (family === 'french_press') {
+      step5Title.innerText = "Add Coffee to the French Press";
+      step5Desc.innerText = "Rinse the French press with hot water to warm it, add the ground coffee, and tare the scale to 0.0g.";
     } else if (family === 'clever') {
       step5Title.innerText = "Weigh Water into Brewer First";
       step5Desc.innerText = `Place filter in Clever Dripper off the vessel, ensure valve is closed, and pour ${waterGrams}g water directly. Keep coffee separate.`;
@@ -2696,7 +2734,7 @@
     document.getElementById('resumeNote').innerText = brew.paused
       ? 'The app was closed while your brew was paused. Resume to carry on from here.'
       : brew.elapsed >= brew.total
-        ? `The app was closed during the ${isPressMethod(brew.method) ? 'press' : 'drawdown'}, and the timer has kept counting. Resume, then tap Done ${finishCue(brew.method)}.`
+        ? `The app was closed during the ${getBrewFinish(brew.method).noun}, and the timer has kept counting. Resume, then tap Done ${finishCue(brew.method)}.`
         : 'The app was closed during your brew, and the timer has kept counting. Resume to pick up where you are.';
   }
 
@@ -3221,6 +3259,7 @@
   }
 
   function getWaterSimulationState(exactT, steps) {
+    const holdsWater = isImmersionBrewer();
     let elapsed = 0;
     let prevCumulativeWater = 0;
 
@@ -3244,7 +3283,7 @@
 
         if (pourT > 0 && localT <= pourT) {
           visualWaterLevel = stageAddedWater * (localT / pourT);
-        } else if (s.phase === 'drawdown' || (s.phase === 'bloom' && s.valve !== 'closed')) {
+        } else if (s.phase === 'drawdown' || (s.phase === 'bloom' && s.valve !== 'closed' && !holdsWater)) {
           const drainRatio = localT / duration;
           visualWaterLevel = Math.max(0, prevCumulativeWater * (1 - drainRatio));
           isDraining = true;
@@ -3393,28 +3432,91 @@
       const pathData = `M ${leftX} ${targetY} C ${mid1X} ${waveY1}, ${mid2X} ${waveY2}, ${rightX} ${targetY} L ${rightX} ${bottomY} L ${leftX} ${bottomY} Z`;
       filterWaterPath.setAttribute('d', pathData);
 
-      // While pressing an AeroPress, the plunger rides down on top of the coffee
-      const plunger = document.getElementById('brewerPlunger');
-      const pressing = isPressMethod() && step.phase === 'drawdown';
-      plunger.style.display = pressing ? '' : 'none';
-      if (pressing) plunger.setAttribute('transform', `translate(0 ${Math.min(106, targetY) - 4})`);
+      updateBrewer(stepState, targetY);
     }
   }
 
-  /* The ring view's brewer: a cone for drippers, a straight chamber for the AeroPress */
+  /* Which drawing the ring view uses for this step */
+  function getBrewerShapeName(stepIndex) {
+    const family = getMethodFamily(currentMethod);
+    if (family === 'french_press') return 'french';
+    if (family !== 'aeropress') return 'dripper';
+    const recipe = RECIPES[currentMethod] || {};
+    // The inverted AeroPress stands on its plunger until it's flipped onto the mug
+    const flipped = activeSteps.slice(0, stepIndex + 1).some(s => s.flip || s.phase === 'drawdown');
+    return recipe.inverted && !flipped ? 'pressInverted' : 'press';
+  }
+
+  /* Puts the plunger in for this step; in the AeroPress it rides down on the coffee as it's pressed */
+  function updateBrewer({ step, stepIndex, timeInStep }, waterY) {
+    const shapeName = getBrewerShapeName(stepIndex);
+    if (shapeName !== brewerShapeName) {
+      // Turn it over when the inverted AeroPress is flipped, unless the flip happened a while ago
+      const flip = brewerShapeName === 'pressInverted' && shapeName === 'press' && step.flip && timeInStep < 2;
+      applyBrewerShape(shapeName, flip);
+    }
+    const plunger = document.getElementById('brewerPlunger');
+    const shape = BREWER_SHAPES[shapeName];
+    if (!shape.plunger) return;
+    // In the inverted AeroPress it stays at the bottom; otherwise it goes in after the pour (French press: not while skimming)
+    const fixed = shapeName === 'pressInverted';
+    const shown = fixed || (step.pourTime === 0 && !step.lidOff);
+    plunger.style.display = shown ? '' : 'none';
+    const y = shape.fixedHeight ? shape.plungerTop : Math.min(106, Math.max(shape.plungerTop, waterY - 4));
+    if (shown && !fixed) plunger.setAttribute('transform', `translate(0 ${y})`);
+  }
+
+  /* The ring view's brewer: a cone for drippers, a straight chamber for the AeroPress (upright, or upside down on its
+     plunger), and a carafe with a handle for the French press. `plunger` is drawn with its seal or mesh at y 0, then
+     moved onto the coffee; `plungerAt` fixes it in place instead. The French press's mesh stays just under its lid
+     (`fixedHeight`), and the coffee is poured out below it. */
+  const AEROPRESS_PLUNGER = `
+    <rect x="76" y="-34" width="8" height="34" rx="2" fill="#D4A373" />
+    <rect x="64" y="-40" width="32" height="6" rx="3" fill="#D4A373" />
+    <rect x="52" y="-4" width="56" height="8" rx="3" fill="#D4A373" />`;
   const BREWER_SHAPES = {
     dripper: { clip: '25,20 135,20 90,110 70,110', outline: '22,18 138,18 92,112 68,112', baseX: 36, baseWidth: 88 },
-    press: { clip: '54,14 106,14 106,110 54,110', outline: '51,10 109,10 109,112 51,112', baseX: 42, baseWidth: 76 }
+    press: { clip: '54,14 106,14 106,110 54,110', outline: '51,10 109,10 109,112 51,112', baseX: 42, baseWidth: 76, plunger: AEROPRESS_PLUNGER, plungerTop: 14 },
+    pressInverted: { clip: '54,14 106,14 106,96 54,96', outline: '51,10 109,10 109,112 51,112', baseX: 42, baseWidth: 76, noBase: true,
+      plunger: AEROPRESS_PLUNGER, plungerAt: 'translate(0 100) scale(1 -1)' },
+    french: { clip: '44,24 116,24 116,110 44,110', outline: '41,20 119,20 119,112 41,112', baseX: 36, baseWidth: 88, handle: true,
+      plunger: `
+        <rect x="77" y="-34" width="6" height="34" fill="#D4A373" />
+        <circle cx="80" cy="-38" r="6" fill="#D4A373" />
+        <rect x="44" y="-3" width="72" height="6" rx="2" fill="#D4A373" opacity="0.9" />
+        <rect x="36" y="-8" width="88" height="6" rx="3" fill="#D4A373" />`, plungerTop: 22, fixedHeight: true }
   };
+  let brewerShapeName = null;
 
-  function setBrewerShape() {
-    const shape = BREWER_SHAPES[isPressMethod() ? 'press' : 'dripper'];
+  function applyBrewerShape(name, flip = false) {
+    const shape = BREWER_SHAPES[name];
+    brewerShapeName = name;
     document.getElementById('brewerClipShape').setAttribute('points', shape.clip);
     document.getElementById('brewerOutline').setAttribute('points', shape.outline);
     const base = document.getElementById('brewerBase');
     base.setAttribute('x', shape.baseX);
     base.setAttribute('width', shape.baseWidth);
-    document.getElementById('brewerPlunger').style.display = 'none';
+    base.style.display = shape.noBase ? 'none' : '';
+    document.getElementById('brewerHandle').style.display = shape.handle ? '' : 'none';
+    const plunger = document.getElementById('brewerPlunger');
+    plunger.innerHTML = shape.plunger || '';
+    plunger.style.display = shape.plungerAt ? '' : 'none';
+    if (shape.plungerAt) plunger.setAttribute('transform', shape.plungerAt);
+    else plunger.removeAttribute('transform');
+
+    const body = document.getElementById('brewerBody');
+    body.classList.remove('flipping');
+    body.style.transform = '';
+    if (flip && !prefersReducedMotion()) {
+      body.style.transform = 'rotate(180deg)';
+      body.getBoundingClientRect();
+      body.classList.add('flipping');
+      body.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function setBrewerShape() {
+    applyBrewerShape(getBrewerShapeName(0));
   }
 
   /* Draws one frame of the brew screen. Only the visible view is redrawn; chart data is always recorded. */
@@ -3434,7 +3536,7 @@
       overtimeAnnounced = true;
       playDistinctChime();
       triggerVibration([150, 100, 150]);
-      speak(isPressMethod() ? 'Still pressing? Tap Done when the plunger is all the way down.' : 'Still draining? Tap Done when it stops dripping.');
+      speak(`${getBrewFinish().still} Tap Done ${finishCue()}.`);
     }
     updatePrimaryControl(stepState.stepIndex === activeSteps.length - 1);
 
@@ -3693,7 +3795,7 @@
     const statusBubble = document.getElementById('unifiedStatusBubble');
 
     if (isOvertime) {
-      stepTitleHeader.innerText = isPressMethod() ? "Still Pressing?" : "Still Draining?";
+      stepTitleHeader.innerText = getBrewFinish().still;
       instruction.innerText = `Past the target time. Tap Done ${finishCue()}.`;
       stepTitleHeader.className = "text-sm sm:text-base font-black tracking-wide uppercase text-amber-400 drop-shadow-sm";
       statusBubble.className = "w-full px-4 py-3 rounded-2xl border bg-amber-500/15 border-amber-400/60 shadow-depth-inner text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-[85px]";
@@ -3733,7 +3835,7 @@
     const btn = document.getElementById('btnPause');
     if (mode === 'done') {
       btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg><span>Done</span>`;
-      btn.setAttribute('aria-label', 'Done, coffee has finished draining');
+      btn.setAttribute('aria-label', `Done, tap ${finishCue()}`);
     } else {
       btn.innerHTML = `<span>${mode === 'resume' ? 'Resume' : 'Pause'}</span>`;
       btn.removeAttribute('aria-label');
@@ -3839,6 +3941,8 @@
       diag.innerHTML = `If drawdown stalled during the valve-open phase, go ${coarserOneStep} to reduce fines migration.`;
     } else if (family === 'aeropress') {
       diag.innerHTML = `If the cup tastes bitter or pressing was hard work, go ${coarserOneStep} next time.`;
+    } else if (family === 'french_press') {
+      diag.innerHTML = `If the cup tastes bitter or silty, go ${coarserOneStep} and let it settle a little longer next time.`;
     } else {
       diag.innerHTML = `If the cup feels muddy or overly heavy, go ${coarserOneStep} next time.`;
     }
@@ -3852,6 +3956,13 @@
     const titleClass = "text-[11px] font-extrabold uppercase tracking-wider mb-1 flex items-center gap-1";
 
     renderGrindSave(null);
+    // Pouring out a French press doesn't depend on the grind, so its advice goes by taste instead
+    if (getMethodFamily(currentMethod) === 'french_press') {
+      title.className = `${titleClass} text-bronze`;
+      title.innerText = "☕ How Does It Taste?";
+      advice.innerHTML = `Bitter or heavy: go ${grindAdjustmentHTML(1, true)} next time. Sour or thin: go ${grindAdjustmentHTML(1, false)}, or steep a little longer.`;
+      return;
+    }
     const press = isPressMethod();
     if (drawdownSeconds === null && press) {
       title.className = `${titleClass} text-amber-400`;

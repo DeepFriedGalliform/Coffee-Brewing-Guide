@@ -18,7 +18,7 @@
 ## Features
 
 ### Brewing
-- **Ten brewing recipes**: Hario V60, Hoffmann V60 (James Hoffmann's one-cup method), Kasuya 4:6 (Tetsu Kasuya's method), Kalita Wave, Chemex, Hario Switch (hybrid and full immersion), Clever Dripper, and AeroPress (standard and inverted). Step through them (and your own recipes) with the **‹ ›** buttons or by swiping on the Brew Method picker. The Coffee Type picker at the top of the coffee list works the same way. The AeroPress has its own prep steps, a plunger in the brew view, press-based advice, and a warning if the brew is bigger than it holds.
+- **Eleven brewing recipes**: Hario V60, Hoffmann V60 (James Hoffmann's one-cup method), Kasuya 4:6 (Tetsu Kasuya's method), Kalita Wave, Chemex, Hario Switch (hybrid and full immersion), Clever Dripper, AeroPress (standard and inverted), and French Press (James Hoffmann's steep, skim and settle method). Step through them (and your own recipes) with the **‹ ›** buttons or by swiping on the Brew Method picker. The Coffee Type picker at the top of the coffee list works the same way. The AeroPress has its own prep steps, a plunger in the brew view (the inverted one stands on its plunger and turns over at the Flip step), press-based advice, and a warning if the brew is bigger than it holds. The French press is drawn as a pot with a lid and plunger, and its advice goes by taste, since how fast you pour it out says nothing about the grind.
 - **Your own recipes**: tap **+ Recipe** at the end of the Brew Method row to copy the selected method, then rename it and change its steps: each step's type (pour, rest, steep, drawdown), pour target, times for 250 g and 500 g, and the Switch/Clever valve. You can also set its own water temperature and make it grind finer or coarser. Your recipes join the methods in the Brew Method picker; when one is selected, tap its name (✎) to edit or delete it.
 - **Any dose, water and ratio**: 8–40 g of coffee and 100–800 g of water (default 15 g / 250 g, 1:16.7).
   - Water moves in 5 g steps and the ratio follows. The ratio moves in 0.5 steps and the water follows, always landing on a multiple of 5 g. Changing the dose keeps your ratio.
@@ -154,11 +154,12 @@ Commit the updated files in `vendor/`.
 Everything lives near the top of the `<script>` in `index.html`:
 
 - **Coffee profiles** (`coffeeData`): each entry has a `category` (`standard`, `pact` or `regional`), display `name`, water `temp` in °C, tasting `notes` and base grind `ode`, on the Fellow Ode Gen 2 dial for a 250 g V60. Coffees added in the app are stored the same way and appear under `mine`.
-- **Recipes** (`RECIPES`): one entry per recipe, with its `grindOffset` (V60 0, Switch hybrid +0.2, full immersion and Clever +0.5, Chemex +1.0, Kasuya 4:6 +1.5, AeroPress −0.5) and its steps. Ready-made recipes name the method they behave like as `base` (for prep steps, valve prompts and advice), and the AeroPress sets a `maxWater`. Add a recipe to `BUILT_IN_METHODS` to put it in the picker. Each step gives:
+- **Recipes** (`RECIPES`): one entry per recipe, with its `grindOffset` (V60 0, Switch hybrid +0.2, full immersion and Clever +0.5, Chemex +1.0, Kasuya 4:6 +1.5, French press +2.0, AeroPress −0.5) and its steps. Ready-made recipes name the method they behave like as `base` (for prep steps, valve prompts and advice), and the AeroPress sets a `maxWater`. Add a recipe to `BUILT_IN_METHODS` to put it in the picker. Each step gives:
   - `water`: the cumulative target as a fraction of the total (0.2 = 20%);
   - `time`: `[seconds at 250 g, seconds at 500 g]`. Other sizes are interpolated, and extrapolated a little beyond that range;
   - `pour: true` if the whole step is pouring. The flow rate is then calculated;
   - `phase` (`pour`, `bloom`, `steep` or `drawdown`), the Switch `valve` state, and `desc`, with `{water}`, `{flow}` and `{crust}` filled in.
+  - for the brew view only, `flip: true` on the inverted AeroPress's Flip step and `lidOff: true` on the French press's skim step.
 - **Batch size**: grind gets 1.0 coarser on the Ode per extra 250 g of water (`GRIND_OFFSET_PER_250G`).
 - **Dose, water and ratio**: `DOSE_LIMITS`, `WATER_LIMITS`, `WATER_STEP` (5 g) and `RATIO_LIMITS`.
 - **Grinders** (`GRINDERS`): each preset converts from the Ode through two reference points, `anchors: [[ode, setting], [ode, setting]]`. Edit those to recalibrate a preset, or add a new grinder the same way. The custom grinder instead maps the Ode's whole 1–11 dial onto the user's finest–coarsest range.

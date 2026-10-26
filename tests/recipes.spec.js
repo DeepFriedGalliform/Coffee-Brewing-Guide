@@ -91,6 +91,62 @@ test('AeroPress Inverted is set up upside down', async ({ page }) => {
   await expect(page.locator('#prepStep5Title')).toHaveText('Assemble Upside Down & Add Coffee');
 });
 
+test('immersion brewers keep their water until the press or pour', async ({ page }) => {
+  await openApp(page);
+  const levels = await page.evaluate(() => {
+    const found = {};
+    for (const method of ['aeropress', 'aeropress_inverted', 'french_press']) {
+      setBrewMethod(method);
+      activeSteps = generateSteps(method, 250);
+      // Late in every step before the last one, the brewer is still full
+      found[method] = activeSteps.slice(1, -1).map((s, i) =>
+        Math.round(getWaterSimulationState(getStepStartTime(i + 1) + s.time * 0.95, activeSteps).visualWater));
+    }
+    return found;
+  });
+  expect(levels).toEqual({ aeropress: [250, 250], aeropress_inverted: [250, 250], french_press: [250, 250, 250] });
+});
+
+test('the inverted AeroPress stands on its plunger until it is flipped', async ({ page }) => {
+  const errors = await openApp(page, { bg_method: 'aeropress_inverted' });
+  await openFirstCoffee(page);
+  await startBrew(page);
+  await page.getByRole('button', { name: 'Live ring view' }).click();
+  await expect(page.locator('#brewerPlunger')).toBeVisible();
+  await expect(page.locator('#brewerPlunger')).toHaveAttribute('transform', 'translate(0 100) scale(1 -1)');
+  await expect(page.locator('#brewerBase')).toBeHidden();
+
+  await page.evaluate(() => seekTo(getStepStartTime(activeSteps.findIndex(s => s.flip)) + 1));
+  await expect(page.locator('#brewerBase')).toBeVisible();
+  await expect(page.locator('#brewerPlunger')).not.toHaveAttribute('transform', 'translate(0 100) scale(1 -1)');
+  expect(errors).toEqual([]);
+});
+
+test('French press has its own prep, pot, and taste-based advice', async ({ page }) => {
+  const errors = await openApp(page, { bg_method: 'french_press' });
+  await expect(page.locator('#methodPickerName')).toHaveText('French Press');
+  await openFirstCoffee(page);
+  await expect(page.locator('#prepStep5Title')).toHaveText('Add Coffee to the French Press');
+  await startBrew(page);
+  await page.getByRole('button', { name: 'Live ring view' }).click();
+  await expect(page.locator('#brewerHandle')).toBeVisible();
+  await expect(page.locator('#brewerPlunger')).toBeHidden();
+
+  await page.evaluate(() => seekTo(getStepStartTime(1) + 5));
+  await expect(page.locator('#brewerPlunger')).toBeVisible();
+  // The lid is off while skimming
+  await page.evaluate(() => seekTo(getStepStartTime(activeSteps.findIndex(s => s.lidOff)) + 5));
+  await expect(page.locator('#brewerPlunger')).toBeHidden();
+
+  await goToLastStep(page);
+  await expect(page.locator('#unifiedInstruction')).toContainText("Tap Done when you've poured the coffee");
+  await page.locator('#btnPause').click();
+  await expect(page.locator('#summaryScreen')).toBeVisible();
+  await expect(page.locator('#drawdownTitle')).toContainText('How Does It Taste?');
+  await expect(page.locator('#grindSaveRow')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
 test('drippers keep the cone and drawdown wording', async ({ page }) => {
   await openApp(page, { bg_method: 'chemex' });
   await openFirstCoffee(page);
