@@ -1,12 +1,14 @@
-// Offline support: precache the app shell, then serve everything (including the
-// Chart.js and font CDNs) cache-first while refreshing in the background.
-// Bump CACHE_VERSION when you change any of the files below.
-const CACHE_VERSION = 'brew-guide-v6';
+// Offline support: precache the app shell (Chart.js and the Inter font included, from vendor/), then serve
+// everything cache-first while refreshing in the background.
+// Bump CACHE_VERSION when you change any of the files below. The app offers a reload once the new version takes over.
+const CACHE_VERSION = 'brew-guide-v7';
 
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './vendor/chart.umd.min.js',
+  './vendor/inter-latin-wght-normal.woff2',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -19,7 +21,8 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL))
+      // cache: 'reload' skips the browser's HTTP cache, so a new release never precaches stale files
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -40,7 +43,7 @@ self.addEventListener('fetch', (event) => {
       const cached = await cache.match(event.request, { ignoreSearch: event.request.mode === 'navigate' });
       const network = fetch(event.request)
         .then((response) => {
-          // Opaque (status 0) responses come from cross-origin CDN scripts and fonts
+          // Opaque (status 0) responses are cross-origin requests made without CORS
           if (response.ok || response.type === 'opaque') cache.put(event.request, response.clone());
           return response;
         })
