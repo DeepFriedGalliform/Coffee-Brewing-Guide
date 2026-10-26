@@ -1,7 +1,7 @@
 // Offline support: precache the app shell (Chart.js and the Inter font included, from vendor/), then serve
 // everything cache-first while refreshing in the background.
 // Bump CACHE_VERSION when you change any of the files below. The app offers a reload once the new version takes over.
-const CACHE_VERSION = 'brew-guide-v11';
+const CACHE_VERSION = 'brew-guide-v12';
 
 const APP_SHELL = [
   './',
