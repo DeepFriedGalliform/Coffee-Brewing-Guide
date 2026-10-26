@@ -1,0 +1,40 @@
+# Runs the browser tests (tests/*.spec.js) on every push to main and every pull request.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # styles.css and vendor/ are built files that are committed; fail if a change forgot to rebuild them
+      - name: Check styles.css and vendor/ are up to date
+        run: |
+          npm run build:css
+          npm run vendor
+          git diff --exit-code -- styles.css vendor
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm test
+
+      - name: Keep the failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 7
