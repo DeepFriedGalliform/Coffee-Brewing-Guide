@@ -18,8 +18,8 @@
 ## Features
 
 ### Brewing
-- **Four brew methods**: Hario V60, Hario Switch (hybrid), Hario Switch (full immersion) and Clever Dripper.
-- **Your own recipes**: tap **+ New recipe** under the methods to copy the selected one, then rename it and change its steps: each step's type (pour, rest, steep, drawdown), pour target, times for 250 g and 500 g, and the Switch/Clever valve. You can also set its own water temperature and make it grind finer or coarser. Your recipes appear as chips under the methods; tap the selected one (✎) to edit or delete it.
+- **Four brew methods**: Hario V60, Hario Switch (hybrid), Hario Switch (full immersion) and Clever Dripper. Step through them (and your own recipes) with the **‹ ›** buttons or by swiping on the Brew Method picker; Coffee Type works the same way.
+- **Your own recipes**: tap **+ New recipe** (beside Brew Profile Selection) to copy the selected method, then rename it and change its steps: each step's type (pour, rest, steep, drawdown), pour target, times for 250 g and 500 g, and the Switch/Clever valve. You can also set its own water temperature and make it grind finer or coarser. Your recipes join the methods in the Brew Method picker; when one is selected, tap its name (✎) to edit or delete it.
 - **Any dose, water and ratio**: 8–40 g of coffee and 100–800 g of water (default 15 g / 250 g, 1:16.7).
   - Water moves in 5 g steps and the ratio follows. The ratio moves in 0.5 steps and the water follows, always landing on a multiple of 5 g. Changing the dose keeps your ratio.
   - Tap a value to type it, or drag sideways on it to scrub. **×1** / **×2** jump to 15 g or 30 g at your current ratio (250 g / 500 g at the default).

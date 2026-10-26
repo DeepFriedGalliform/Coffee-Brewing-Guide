@@ -123,8 +123,9 @@
     .text-large .text-base { font-size: 18px; line-height: 1.75rem; }
     .text-large #totalElapsedTimer { font-size: 1.875rem; line-height: 2.25rem; }
     .text-large #stepTitleHeader { font-size: 1.25rem; line-height: 1.75rem; }
+    .text-large .picker-label { width: 6.4rem; }
+    @media (max-width: 359px) { .text-large .picker-label { width: 5.25rem; font-size: 10px; } .text-large [id$="PickerName"] { font-size: 11px; } }
     /* ...except in the tightest spots, which only step up a little so they still fit a small phone */
-    .text-large [aria-label="Coffee type"] { font-size: 12px; }
     .text-large [data-brew-field] .text-\[9px\] { font-size: 10px; }
     .text-large [data-brew-field] .text-\[13px\] { font-size: 14px; }
     .text-large #profileCardsContainer .text-\[11px\] { font-size: 12px; }
@@ -183,23 +184,13 @@
       </div>
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-3">
-        <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">BREW METHOD</span>
-          <div role="group" aria-label="Brew method" class="grid grid-cols-4 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-[11px] font-bold gap-1">
-            <button id="btnMethodV60" onclick="setBrewMethod('v60')" class="py-2.5 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button text-center active:scale-95">
-              V60
-            </button>
-            <button id="btnMethodSwitchHybrid" onclick="setBrewMethod('switch_hybrid')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white text-center leading-tight active:scale-95">
-              Switch Hybrid
-            </button>
-            <button id="btnMethodSwitchImmersion" onclick="setBrewMethod('switch_immersion')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white text-center leading-tight active:scale-95">
-              Switch Immersion
-            </button>
-            <button id="btnMethodClever" onclick="setBrewMethod('clever')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white text-center leading-tight active:scale-95">
-              Clever Dripper
-            </button>
+        <div class="flex items-center gap-2">
+          <span class="picker-label w-[5.25rem] shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-slate-400">BREW METHOD</span>
+          <div id="methodPicker" role="group" aria-label="Brew method" class="flex-1 min-w-0 flex items-center gap-0.5 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner" style="touch-action: pan-y">
+            <button type="button" onclick="stepBrewMethod(-1)" aria-label="Previous brew method" class="w-7 h-8 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-90 transition-all text-xl font-bold leading-none flex items-center justify-center">‹</button>
+            <button type="button" id="methodPickerName" onclick="onMethodNameTap()" aria-live="polite" class="flex-1 min-w-0 h-8 px-1.5 rounded-lg bg-bronze text-slate-950 text-[11px] font-extrabold shadow-depth-button active:scale-[0.98] transition-all"><span class="line-clamp-2 leading-[1.1]">V60</span></button>
+            <button type="button" onclick="stepBrewMethod(1)" aria-label="Next brew method" class="w-7 h-8 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-90 transition-all text-xl font-bold leading-none flex items-center justify-center">›</button>
           </div>
-          <div id="myRecipesRow" role="group" aria-label="Your recipes" class="flex flex-wrap gap-1.5 mt-1.5"></div>
         </div>
 
         <div>
@@ -238,28 +229,22 @@
           </div>
         </div>
 
-        <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">COFFEE TYPE</span>
-          <div role="group" aria-label="Coffee type" class="grid grid-cols-4 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-xs font-bold gap-1">
-            <button id="btnTypeStandard" onclick="setCoffeeType('standard')" class="py-2.5 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button uppercase active:scale-95">
-              STANDARD
-            </button>
-            <button id="btnTypePact" onclick="setCoffeeType('pact')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95">
-              PACT
-            </button>
-            <button id="btnTypeRegional" onclick="setCoffeeType('regional')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95">
-              REGIONAL
-            </button>
-            <button id="btnTypeMine" onclick="setCoffeeType('mine')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95">
-              MINE
-            </button>
+        <div class="flex items-center gap-2">
+          <span class="picker-label w-[5.25rem] shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-slate-400">COFFEE TYPE</span>
+          <div id="typePicker" role="group" aria-label="Coffee type" class="flex-1 min-w-0 flex items-center gap-0.5 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner" style="touch-action: pan-y">
+            <button type="button" onclick="stepCoffeeType(-1)" aria-label="Previous coffee type" class="w-7 h-8 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-90 transition-all text-xl font-bold leading-none flex items-center justify-center">‹</button>
+            <button type="button" id="typePickerName" onclick="onTypeNameTap()" aria-live="polite" class="flex-1 min-w-0 h-8 px-1.5 rounded-lg bg-bronze text-slate-950 text-[11px] font-extrabold shadow-depth-button active:scale-[0.98] transition-all"><span class="line-clamp-2 leading-[1.1]">Standard</span></button>
+            <button type="button" onclick="stepCoffeeType(1)" aria-label="Next coffee type" class="w-7 h-8 shrink-0 rounded-lg text-slate-300 hover:text-white hover:bg-borderDark active:scale-90 transition-all text-xl font-bold leading-none flex items-center justify-center">›</button>
           </div>
         </div>
       </div>
     </div>
 
     <div class="bg-darkBg/40 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5 flex-1 my-2 overflow-hidden">
-      <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-0.5">BREW PROFILE SELECTION</span>
+      <div class="flex items-center justify-between gap-2 px-0.5">
+        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">BREW PROFILE SELECTION</span>
+        <button type="button" id="btnNewRecipe" onclick="openRecipeEditor(null)" class="shrink-0 px-2 py-1 rounded-md border border-dashed border-borderDark text-[10px] font-bold text-slate-400 hover:text-bronze hover:border-bronze/60 leading-none transition-all active:scale-95">+ New recipe</button>
+      </div>
       <div id="profileCardsContainer" class="flex flex-col gap-2.5 overflow-y-auto pr-1 custom-scrollbar flex-1"></div>
     </div>
 
@@ -1400,37 +1385,63 @@
     currentMethod = method;
     localStorage.setItem('bg_method', method);
 
-    const activeClass = "py-2.5 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button text-center leading-tight active:scale-95";
-    const inactiveClass = "py-2.5 rounded-lg transition-all text-slate-400 hover:text-white text-center leading-tight active:scale-95";
-    applyToggle({ v60: 'btnMethodV60', switch_hybrid: 'btnMethodSwitchHybrid', switch_immersion: 'btnMethodSwitchImmersion', clever: 'btnMethodClever' }, method, activeClass, inactiveClass);
-
-    renderMyRecipes();
+    renderMethodPicker();
     renderCoffeeProfileCards();
   }
 
-  /* Your recipes as chips under the methods: tap to use one, tap the active one to edit it */
-  function renderMyRecipes() {
-    const row = document.getElementById('myRecipesRow');
-    row.innerHTML = '';
-    const chip = "px-2.5 py-1.5 rounded-lg text-[11px] font-bold leading-none transition-all active:scale-95";
-    Object.keys(RECIPES).filter(isCustomRecipe).forEach(key => {
-      const active = key === currentMethod;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `${chip} ${active ? 'bg-bronze text-slate-950 font-extrabold shadow-depth-button' : 'border border-borderDark text-slate-300 hover:text-white'}`;
-      btn.setAttribute('aria-pressed', active);
-      btn.innerText = active ? `${RECIPES[key].name} ✎` : RECIPES[key].name;
-      btn.title = active ? 'Edit this recipe' : 'Use this recipe';
-      btn.onclick = () => (active ? openRecipeEditor(key) : setBrewMethod(key));
-      row.appendChild(btn);
+  /* The built-in methods, then your recipes: the order the ‹ › buttons step through */
+  function getMethodList() {
+    return [...BUILT_IN_METHODS, ...Object.keys(RECIPES).filter(isCustomRecipe)];
+  }
+
+  function stepBrewMethod(direction) {
+    const list = getMethodList();
+    const index = Math.max(0, list.indexOf(currentMethod));
+    setBrewMethod(list[(index + direction + list.length) % list.length]);
+  }
+
+  /* The method's name in the picker; one of your recipes shows ✎ and opens the editor when tapped */
+  function renderMethodPicker() {
+    const name = document.getElementById('methodPickerName');
+    const recipe = RECIPES[currentMethod] || RECIPES.v60;
+    const custom = isCustomRecipe(currentMethod);
+    // Long names wrap onto a second line inside the pill rather than being cut off
+    name.firstElementChild.innerText = custom ? `${recipe.name} ✎` : recipe.name;
+    name.title = custom ? 'Edit this recipe' : recipe.name;
+    name.setAttribute('aria-label', custom ? `Brew method: ${recipe.name}. Tap to edit this recipe` : `Brew method: ${recipe.name}`);
+    document.getElementById('btnNewRecipe').title = `Start a recipe from ${recipe.name}`;
+  }
+
+  function onMethodNameTap() {
+    if (isCustomRecipe(currentMethod)) openRecipeEditor(currentMethod);
+    else stepBrewMethod(1);
+  }
+
+  /* Swiping sideways on a picker steps it, like its ‹ › buttons */
+  function initPickerSwipe(picker, step) {
+    let startX = null;
+    let swiped = false;
+    picker.addEventListener('pointerdown', e => {
+      startX = e.clientX;
+      swiped = false;
     });
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = `${chip} border border-dashed border-borderDark text-slate-400 hover:text-bronze hover:border-bronze/60`;
-    add.innerText = '+ New recipe';
-    add.title = `Start a recipe from ${(RECIPES[currentMethod] || RECIPES.v60).name}`;
-    add.onclick = () => openRecipeEditor(null);
-    row.appendChild(add);
+    picker.addEventListener('pointerup', e => {
+      if (startX === null) return;
+      const dx = e.clientX - startX;
+      startX = null;
+      if (Math.abs(dx) >= 30) {
+        swiped = true;
+        step(dx < 0 ? 1 : -1);
+      }
+    });
+    picker.addEventListener('pointercancel', () => { startX = null; });
+    // A swipe that ends on a button shouldn't also count as a tap on it
+    picker.addEventListener('click', e => {
+      if (!swiped) return;
+      swiped = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }, true);
   }
 
   function getWater() {
@@ -1617,14 +1628,25 @@
     saveBrewSize();
   }
 
+  const COFFEE_TYPE_NAMES = { standard: 'Standard', pact: 'Pact', regional: 'Regional', mine: 'Mine' };
+
+  function stepCoffeeType(direction) {
+    const index = Math.max(0, COFFEE_TYPES.indexOf(currentCoffeeType));
+    setCoffeeType(COFFEE_TYPES[(index + direction + COFFEE_TYPES.length) % COFFEE_TYPES.length]);
+  }
+
+  function onTypeNameTap() {
+    stepCoffeeType(1);
+  }
+
   function setCoffeeType(type) {
     triggerHapticFeedback();
     currentCoffeeType = type;
     localStorage.setItem('bg_type', type);
 
-    const activeClass = "py-2.5 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button uppercase active:scale-95";
-    const inactiveClass = "py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95";
-    applyToggle({ standard: 'btnTypeStandard', pact: 'btnTypePact', regional: 'btnTypeRegional', mine: 'btnTypeMine' }, type, activeClass, inactiveClass);
+    const name = document.getElementById('typePickerName');
+    name.firstElementChild.innerText = COFFEE_TYPE_NAMES[type];
+    name.setAttribute('aria-label', `Coffee type: ${COFFEE_TYPE_NAMES[type]}`);
 
     const filteredKeys = Object.keys(coffeeData).filter(key => coffeeData[key].category === type);
     if (filteredKeys.length > 0) {
@@ -3749,6 +3771,8 @@
   initBrewFieldControls();
   setBrewMethod(currentMethod);
   setCoffeeType(currentCoffeeType);
+  initPickerSwipe(document.getElementById('methodPicker'), stepBrewMethod);
+  initPickerSwipe(document.getElementById('typePicker'), stepCoffeeType);
 
   applyDisplaySettings();
 
