@@ -66,7 +66,7 @@ Everything the app remembers is stored only on your device, in the browser's loc
 
 - It's free, needs no account or key, and the photo is never uploaded.
 - The first scan downloads the text reader from this site (a few MB: the engine build your phone supports plus a compact English model). After that it's cached, and scanning works offline.
-- A scan takes a few seconds. Clear, flat, well-lit labels read best; shiny or curved bags and decorative fonts may need a correction or two.
+- A scan takes a few seconds: it reads the photo at two sizes and combines the results, since small print is often only legible enlarged. Clear, flat, well-lit labels read best; shiny or curved bags and decorative fonts may need a correction or two.
 - The app then works out the details from the text. It's a best guess (for example, it assumes the roaster's name comes before the coffee's name), so always check before saving.
 
 ## Install on your phone

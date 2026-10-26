@@ -2020,9 +2020,13 @@
      service worker and Tesseract's own cache keep it for offline use). The recognised text goes into the paste box,
      so it can be corrected, and parseLabelText() turns it into the editor's fields for the user to check.
      Paste label text runs the same parser on text copied from the bag, e.g. with iPhone Live Text. */
-  const SCAN_IMAGE_MAX_EDGE = 2000;
+  // Each scan reads the photo at these sizes (long edge, px) and combines the results. Small print on a bag is often
+  // only readable when enlarged, and each size catches lines the other misses.
+  const SCAN_PASS_EDGES = [2500, 3500];
+  // iOS refuses canvases much bigger than 16 megapixels
+  const SCAN_MAX_PIXELS = 12e6;
   // Lines Tesseract is less sure of than this (0-100) are usually graphics or texture, not text
-  const OCR_MIN_LINE_CONFIDENCE = 55;
+  const OCR_MIN_LINE_CONFIDENCE = 40;
   const COFFEE_ORIGINS = ['Ethiopia', 'Kenya', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda', 'Yemen', 'Colombia', 'Brazil',
     'Peru', 'Bolivia', 'Ecuador', 'Guatemala', 'Costa Rica', 'Honduras', 'El Salvador', 'Nicaragua', 'Panama', 'Mexico',
     'Sumatra', 'Indonesia', 'Papua New Guinea', 'India', 'Vietnam', 'China', 'Myanmar', 'Thailand', 'Jamaica', 'Hawaii'];
@@ -2044,9 +2048,13 @@
     'blackcurrant', 'redcurrant', 'cranberry', 'cherry', 'plum', 'peach', 'apricot', 'nectarine', 'stone fruit', 'apple',
     'pear', 'grape', 'raisin', 'fig', 'date', 'mango', 'pineapple', 'papaya', 'passion fruit', 'lychee', 'melon', 'kiwi',
     'tropical', 'rhubarb', 'tamarind', 'cola', 'malt', 'spice', 'cinnamon', 'clove', 'cardamom', 'nutmeg', 'cedar',
-    'tobacco', 'earthy', 'wine', 'winey', 'juicy', 'sweet', 'syrupy', 'creamy'];
+    'tobacco', 'earthy', 'wine', 'winey', 'juicy', 'sweet', 'syrupy', 'creamy', 'fruit', 'fruits', 'fruity', 'panela',
+    'biscuit', 'cookie', 'toast', 'smoky', 'liquorice', 'licorice', 'blossom', 'lemongrass', 'stone fruits'];
+  // Printed on many bags but never the coffee's name: grind options, certifications, slogans
+  const LABEL_BOILERPLATE = /whole ?bea|\bground\b|filter|espresso|cafeti|aeropress|stove ?top|moka|french press|cold brew|single origin|for the planet|\bplanet\b|\bmember\b|b corp|fair ?trade|organic|rainforest|recycl|compost|best before|roast(ed)? on|roast date|net (wt|weight)|freshly roasted|great coffee|made simple|speciality coffee|specialty coffee/i;
   let ocrWorker = null;
   let ocrProgress = () => {};
+  let ocrPass = '';
 
   /* kind: 'info', 'ok' or 'error'; an empty message hides the line */
   function showScanStatus(message, kind = 'info') {
@@ -2063,22 +2071,29 @@
     input.click();
   }
 
-  /* The photo drawn onto a canvas, no bigger than SCAN_IMAGE_MAX_EDGE on its long edge (faster to read on a phone) */
-  async function photoToCanvas(file) {
+  async function loadPhoto(file) {
     const url = URL.createObjectURL(file);
     try {
       const img = new Image();
       img.src = url;
       await img.decode();
-      const scale = Math.min(1, SCAN_IMAGE_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.naturalWidth * scale);
-      canvas.height = Math.round(img.naturalHeight * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      return canvas;
+      return img;
     } finally {
       URL.revokeObjectURL(url);
     }
+  }
+
+  /* The photo scaled (up or down) so its long edge is longEdge px, within SCAN_MAX_PIXELS */
+  function drawScaled(img, longEdge) {
+    let scale = longEdge / Math.max(img.naturalWidth, img.naturalHeight);
+    scale = Math.min(scale, Math.sqrt(SCAN_MAX_PIXELS / (img.naturalWidth * img.naturalHeight)));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas;
   }
 
   function loadScript(src) {
@@ -2104,21 +2119,42 @@
       gzip: true,
       logger: message => ocrProgress(message)
     });
+    // Find the text blocks automatically (Tesseract.js otherwise treats the photo as one block), which copes far
+    // better with labels laid out in boxes and columns
+    await ocrWorker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.AUTO });
     return ocrWorker;
   }
 
-  /* Recognised lines Tesseract is reasonably sure of, with stray symbols removed */
-  function getOcrText(data) {
+  /* Recognised lines Tesseract is reasonably sure of, as { text, confidence }, cleaned of stray symbols */
+  function getOcrLines(data) {
     const lines = [];
     (data.blocks || []).forEach(block => (block.paragraphs || []).forEach(paragraph => (paragraph.lines || []).forEach(line => {
-      if (line.confidence >= OCR_MIN_LINE_CONFIDENCE) lines.push(line.text);
-    })));
-    const source = lines.length ? lines : String(data.text || '').split('\n');
-    return source
-      .map(line => line.replace(/[^\p{L}\p{N}\s.,:;'’&%°/()+\-–·]/gu, ' ').replace(/\s+/g, ' ').trim())
+      if (line.confidence < OCR_MIN_LINE_CONFIDENCE) return;
+      const text = line.text
+        .replace(/[^\p{L}\p{N}\s.,:;'’&%°/()+\-–·|\[\]]/gu, ' ')
+        // Checkboxes and icons read as brackets at the start of a line, e.g. "[J Filter" or "(] Espresso"
+        .replace(/^(?:\S{0,2}[\[\](){}|]\S{0,2}\s+)+/u, '')
+        .replace(/[\[\]{}]/g, ' ')
+        .replace(/\s+/g, ' ').trim();
       // Keep lines that are mostly letters or digits: the rest is usually noise from patterns and pictures
-      .filter(line => line.length >= 2 && (line.match(/[\p{L}\p{N}]/gu) || []).length / line.length >= 0.6)
-      .join('\n');
+      if (text.length >= 2 && (text.match(/[\p{L}\p{N}]/gu) || []).length / text.length >= 0.6) {
+        lines.push({ text, confidence: line.confidence });
+      }
+    })));
+    return lines;
+  }
+
+  /* Combines the passes: the best-scoring pass in its own order, then any lines only the other passes found */
+  function mergeOcrPasses(passes) {
+    const score = lines => lines.reduce((sum, line) => sum + (line.text.match(/\p{L}/gu) || []).length * line.confidence, 0);
+    const ordered = passes.slice().sort((a, b) => score(b) - score(a));
+    const key = text => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const merged = [];
+    ordered.forEach(lines => lines.forEach(({ text }) => {
+      const k = key(text);
+      if (k && !merged.some(existing => key(existing).includes(k))) merged.push(text);
+    }));
+    return merged.join('\n');
   }
 
   async function scanPhoto(input) {
@@ -2129,16 +2165,21 @@
     showScanStatus('Getting the text reader ready…');
     ocrProgress = message => {
       if (message.status === 'recognizing text') {
-        showScanStatus(`Reading the label… ${Math.round((message.progress || 0) * 100)}%`);
+        showScanStatus(`Reading the label (pass ${ocrPass})… ${Math.round((message.progress || 0) * 100)}%`);
       } else if (/loading/.test(message.status || '')) {
         showScanStatus(`Getting the text reader ready… ${Math.round((message.progress || 0) * 100)}%`);
       }
     };
     try {
-      const canvas = await photoToCanvas(file);
+      const img = await loadPhoto(file);
       const worker = await getOcrWorker();
-      const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
-      const text = getOcrText(data);
+      const passes = [];
+      for (let i = 0; i < SCAN_PASS_EDGES.length; i++) {
+        ocrPass = `${i + 1} of ${SCAN_PASS_EDGES.length}`;
+        const { data } = await worker.recognize(drawScaled(img, SCAN_PASS_EDGES[i]), {}, { text: true, blocks: true });
+        passes.push(getOcrLines(data));
+      }
+      const text = mergeOcrPasses(passes);
       if (!text.trim()) {
         showScanStatus("Couldn't find any text. Try a closer, well-lit photo with the label flat and straight on.", 'error');
         return;
@@ -2223,27 +2264,64 @@
     const lower = all.toLowerCase();
     const titleCase = value => value.toLowerCase().replace(/(^|[\s\-/(])(\p{L})/gu, (m, sep, c) => sep + c.toUpperCase());
     const tidy = line => (line && line === line.toUpperCase() && /\p{L}/u.test(line) ? titleCase(line) : line || '');
-    const has = word => new RegExp(`(^|[^\\p{L}])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}]|$)`, 'iu').test(all);
+    const escape = word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const has = word => new RegExp(`(^|[^\\p{L}])${escape(word)}([^\\p{L}]|$)`, 'iu').test(all);
     const countFlavours = line => FLAVOUR_WORDS.filter(word => new RegExp(`(^|[^\\p{L}])${word}`, 'iu').test(line)).length;
+    // Roast words, allowing for common misreads such as "Mediun" or "Nedium"
+    const MEDIUM = '[mn]edi[a-z]{1,2}';
+    const ROAST_WORD = new RegExp(`^(?:light|${MEDIUM}|dark)$`, 'i');
+    const normaliseRoast = value => value.toLowerCase().replace(new RegExp(MEDIUM, 'g'), 'medium').replace(/\s*[/ ]\s*|\s+/g, '-');
 
-    // Tasting notes: after a "Notes"-style heading (on the same line or the next), else the line richest in flavours
-    const NOTES_HEADING = /^(?:tasting notes|taste notes|flavou?r notes|cup notes|notes|tastes? like|flavou?rs?|in the cup|we taste|cup profile)\s*[:\-–]?\s*/i;
+    // Roast: "Medium/Dark" anywhere; "Light roast" or "Roast: Light"; or the line after a "Roasted:" heading
+    let roast = '';
+    const compound = all.match(new RegExp(`\\b(${MEDIUM}|light)\\s*[/\\-]\\s*(dark|light|${MEDIUM})\\b`, 'i'));
+    const inline = all.match(new RegExp(`\\b(light|${MEDIUM}[- ]light|${MEDIUM}[- ]dark|${MEDIUM}|dark)\\s+roast`, 'i')) ||
+      all.match(new RegExp(`roast(?:ed|\\s+level)?\\s*[:\\-–]?\\s*(light|${MEDIUM}[- ]light|${MEDIUM}[- ]dark|${MEDIUM}|dark)\\b`, 'i'));
+    if (compound) {
+      roast = normaliseRoast(`${compound[1]}-${compound[2]}`);
+      if (roast === 'light-medium') roast = 'medium-light';
+      if (roast === 'dark-medium') roast = 'medium-dark';
+    } else if (inline) {
+      roast = normaliseRoast(inline[1]);
+    } else {
+      const headingAt = lines.findIndex(line => /\broast(ed|\s+level)?\s*:/i.test(line));
+      const next = headingAt >= 0 && lines[headingAt + 1] ? lines[headingAt + 1].split(' ')[0] : '';
+      if (ROAST_WORD.test(next)) roast = normaliseRoast(next);
+      else if (/\bomni\b/.test(lower)) roast = 'medium-light';
+      else if (/\b(filter roast|roasted for filter|for filter brewing)\b/.test(lower)) roast = 'light';
+      else if (/\b(espresso roast|roasted for espresso)\b/.test(lower)) roast = 'medium-dark';
+    }
+    if (!['light', 'medium-light', 'medium', 'medium-dark', 'dark'].includes(roast)) roast = '';
+
+    // Tasting notes: after a "Notes"-style heading (anywhere in its line, since labels often have two columns, and
+    // running on over the next short lines), else the line richest in flavours
+    const NOTES_HEADING = /(?:tasting notes|taste notes|flavou?r notes|cup notes|tastes? like|in the cup|we taste|cup profile|\bnotes|\bflavou?rs?)\s*[:\-–]?\s*/i;
     const OTHER_DETAIL = /roast|process|washed|natural|altitude|elevation|masl|variet|\d{2,}/i;
+    // A line under the notes heading may start with the other column's roast (e.g. "Medium/Dark Caramel", when the
+    // heading line was "Roasted: Tastes like:") or with a misread icon (e.g. "Ns Red Fruits"): drop those
+    const ROAST_TOKEN = `/?(?:${MEDIUM}|light|dark)(?:\\s*/\\s*(?:${MEDIUM}|light|dark))?`;
+    const cleanNoteLine = (line, besideRoast) => line
+      .replace(new RegExp(besideRoast ? `^${ROAST_TOKEN}\\s+(?=\\p{L})` : `^\\S*/\\S*\\s+(?=\\p{L})`, 'iu'), '')
+      .replace(/^\p{L}{1,2}\s+(?=\p{L}{3})/u, m => (countFlavours(m) ? m : ''))
+      .trim();
     const noteLines = new Set();
     let notes = '';
     const headingIndex = lines.findIndex(line => NOTES_HEADING.test(line));
     if (headingIndex >= 0) {
       noteLines.add(headingIndex);
-      const parts = [lines[headingIndex].replace(NOTES_HEADING, '').trim()].filter(Boolean);
-      // Notes often wrap: keep reading while the last part ends with a comma or the next line is more flavours
-      for (let i = headingIndex + 1; i < lines.length && parts.length < 4; i++) {
-        const continues = parts.length === 0 || /[,&/+]$/.test(parts[parts.length - 1]) ||
-          (countFlavours(lines[i]) >= 1 && !OTHER_DETAIL.test(lines[i]));
-        if (!continues) break;
-        parts.push(lines[i]);
+      const heading = lines[headingIndex];
+      const parts = [heading.slice(heading.search(NOTES_HEADING)).replace(NOTES_HEADING, '').trim()].filter(Boolean);
+      for (let i = headingIndex + 1; i < lines.length && parts.length < 5; i++) {
+        const line = cleanNoteLine(lines[i], /roast/i.test(heading));
+        if (!/\p{L}{2}/u.test(line)) continue;
+        const short = line.split(' ').length <= 4;
+        const continues = /[,&/+]$/.test(parts[parts.length - 1] || '') || countFlavours(line) >= 1 ||
+          (short && parts.length < 4 && !OTHER_DETAIL.test(line) && !LABEL_BOILERPLATE.test(line));
+        if (!continues || LABEL_BOILERPLATE.test(line)) break;
+        parts.push(line);
         noteLines.add(i);
       }
-      notes = parts.join(' ');
+      notes = parts.join(', ');
     }
     if (!notes) {
       const best = lines.map((line, index) => ({ line, index, score: countFlavours(line) })).sort((a, b) => b.score - a.score)[0];
@@ -2252,20 +2330,15 @@
         noteLines.add(best.index);
       }
     }
-    notes = notes.replace(/\s*[|·•]\s*/g, ', ').replace(/\s*&\s*/g, ', ').replace(/,\s*,/g, ',').replace(/[,;:\s]+$/, '').trim();
+    notes = notes.replace(/\s*[|·•]\s*/g, ', ').replace(/\s*&\s*/g, ', ').replace(/(\s*,)+/g, ',').replace(/,(?=\S)/g, ', ')
+      .replace(/[,;:\s]+$/, '').trim();
     if (notes && notes === notes.toUpperCase()) notes = notes.toLowerCase();
-    notes = notes.charAt(0).toUpperCase() + notes.slice(1);
+    if (notes) notes = notes.split(', ').map((note, i) => (i === 0 ? note.charAt(0).toUpperCase() + note.slice(1) : note)).join(', ');
 
-    // Process, roast, origin, variety, altitude, temperature
+    // Process, origin, variety, altitude, temperature
     const processMatch = lower.match(/\b(pulped natural|semi-washed|fully washed|wet-hulled|carbonic maceration|anaerobic natural|anaerobic washed|anaerobic|double fermented|washed|natural|honey|dry process(?:ed)?)\b/);
     let process = processMatch ? titleCase(processMatch[1]) : '';
     if (/^Dry Process/.test(process)) process = 'Natural';
-    const roastMatch = lower.match(/\b(light|medium[- ]light|medium[- ]dark|medium|dark)\s+roast/) ||
-      lower.match(/roast(?:\s+level)?\s*[:\-–]?\s*(light|medium[- ]light|medium[- ]dark|medium|dark)\b/);
-    const roast = roastMatch ? roastMatch[1].replace(' ', '-')
-      : /\bomni\b/.test(lower) ? 'medium-light'
-      : /\bfilter\b/.test(lower) ? 'light'
-      : /\bespresso\b/.test(lower) ? 'medium-dark' : '';
     const country = COFFEE_ORIGINS.find(has) || '';
     const region = Object.keys(COFFEE_REGIONS).find(has) || '';
     const origin = [country || (region && COFFEE_REGIONS[region]), region].filter(Boolean).join(', ');
@@ -2276,19 +2349,34 @@
     const fahrenheit = all.match(/\b(\d{3})\s*°\s*F\b/i);
     const tempC = celsius ? parseFloat(celsius[1]) : fahrenheit ? (parseFloat(fahrenheit[1]) - 32) * 5 / 9 : NaN;
 
-    // Name and roaster: short lines that aren't details. Bags usually print the roaster first, then the coffee.
-    // A line that's only the country, region or variety (e.g. "Kenya" or "Ethiopia, Guji") is a detail, but a name
-    // that includes one (e.g. "Kiambu Peaberry") isn't
+    // Name and roaster
     const knownWords = [country, region, variety].filter(Boolean).map(word => word.toLowerCase());
-    const onlyKnownWords = line => !knownWords.reduce((rest, word) => rest.split(word).join(' '), line.toLowerCase()).replace(/[^\p{L}]/gu, '');
-    const isDetail = (line, index) => noteLines.has(index) || countFlavours(line) >= 2 ||
-      /[:]|roast|notes|process|washed|natural|hulled|honey|anaerobic|ferment|carbonic|altitude|elevation|masl|variet|weight|net wt|grams|\d{2,}|www\.|\.com|@/i.test(line);
-    const isNameLike = line => line.length >= 3 && line.length <= 40 && /\p{L}{2}/u.test(line);
-    let candidates = lines.filter((line, index) => !isDetail(line, index) && !onlyKnownWords(line) && isNameLike(line));
-    // Some coffees are named after their origin (e.g. "Sumatra Gayo"): if that leaves too few lines, allow those back
-    if (candidates.length < 2) candidates = lines.filter((line, index) => !isDetail(line, index) && isNameLike(line));
-    const name = tidy(candidates.length > 1 ? candidates[1] : candidates[0]);
-    const roaster = candidates.length > 1 ? tidy(candidates[0]) : '';
+    // A line that's only the country, region or variety (plus maybe a number, e.g. "COLOMBIA 50" or "Ethiopia, Guji")
+    const onlyKnownWords = line => !knownWords.reduce((rest, word) => rest.split(word).join(' '), line.toLowerCase())
+      .replace(/\bno\.?\b|[^\p{L}]/gu, '');
+    const isDetail = (line, index) => noteLines.has(index) || countFlavours(line) >= 2 || LABEL_BOILERPLATE.test(line) ||
+      // "roast" but not "Roasters" or "Roastery", which are usually part of the roaster's name
+      /[:]|roast(?!ers?\b|ery\b)|notes|process|washed|natural|hulled|honey|anaerobic|ferment|carbonic|altitude|elevation|masl|variet|weight|net wt|grams|\d{2,}|www\.|\.com|@/i.test(line);
+    const isNameLike = line => line.length >= 3 && line.length <= 40 && /\p{L}{3}/u.test(line) &&
+      // Mostly real words, not OCR debris like "i ORIGIN"
+      !/^\p{Ll}\s/u.test(line) && line.split(' ').filter(word => /\p{L}{2}/u.test(word)).length >= Math.ceil(line.split(' ').length / 2);
+    let name = '';
+    let roaster = '';
+    // Many bags print the country with the coffee's name on the next line ("COLOMBIA" / "EL CARMEN"):
+    // call it "Colombia El Carmen", and only treat a line above it as the roaster
+    const countryLine = country ? lines.findIndex(line => onlyKnownWords(line) && line.toLowerCase().includes(country.toLowerCase())) : -1;
+    const afterCountry = countryLine >= 0 ? lines[countryLine + 1] : '';
+    if (afterCountry && !isDetail(afterCountry, countryLine + 1) && !onlyKnownWords(afterCountry) && isNameLike(afterCountry)) {
+      name = `${country} ${tidy(afterCountry)}`;
+      roaster = tidy(lines.slice(0, countryLine).find((line, index) => !isDetail(line, index) && isNameLike(line)) || '');
+    } else {
+      let candidates = lines.filter((line, index) => !isDetail(line, index) && !onlyKnownWords(line) && isNameLike(line));
+      // Some coffees are named after their origin (e.g. "Sumatra Gayo"): if that leaves too few lines, allow those back
+      if (candidates.length < 2) candidates = lines.filter((line, index) => !isDetail(line, index) && isNameLike(line));
+      // Bags usually print the roaster first, then the coffee
+      name = tidy(candidates.length > 1 ? candidates[1] : candidates[0]);
+      roaster = candidates.length > 1 ? tidy(candidates[0]) : '';
+    }
 
     return { name, roaster, origin, process, variety, altitude, roast, notes, tempC };
   }
