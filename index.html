@@ -357,18 +357,13 @@
       </div>
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
-        <div class="grid grid-cols-2 gap-2">
-          <button id="btnScanBag" type="button" onclick="chooseScanPhoto()" class="py-2.5 rounded-lg bg-bronze text-slate-950 font-extrabold text-[11px] shadow-depth-button active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none">📷 Scan bag</button>
-          <button type="button" onclick="togglePastePanel()" class="py-2.5 rounded-lg bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white font-bold text-[11px] active:scale-95 transition-all">📋 Paste label text</button>
-        </div>
-        <p class="text-[10px] text-slate-400 leading-relaxed">Scan bag reads the label on your phone: free, and the photo never leaves your device. The first scan downloads the text reader (a few MB).</p>
-        <input id="scanPhotoInput" type="file" accept="image/*" class="hidden" onchange="scanPhoto(this)">
+        <button type="button" onclick="togglePastePanel()" class="py-2.5 rounded-lg bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white font-bold text-[11px] active:scale-95 transition-all">📋 Paste label text</button>
         <div id="pastePanel" class="hidden flex-col gap-1.5">
           <textarea id="pasteText" rows="4" placeholder="Paste the text from the bag here" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze resize-none"></textarea>
           <p class="text-[10px] text-slate-400 leading-relaxed">Tip: open a photo of the bag in Photos, press and hold the label text, tap Select All, then Copy.</p>
           <button type="button" onclick="fillFromPastedText()" class="py-2 rounded-lg bg-darkBg border border-bronze/60 text-bronze font-bold text-[11px] active:scale-95 transition-all">Fill in from text</button>
         </div>
-        <p id="scanStatus" role="status" class="hidden text-[11px] font-bold leading-snug"></p>
+        <p id="pasteStatus" role="status" class="hidden text-[11px] font-bold leading-snug"></p>
       </div>
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
@@ -1927,7 +1922,7 @@
     document.getElementById('pastePanel').classList.add('hidden');
     document.getElementById('pastePanel').classList.remove('flex');
     document.getElementById('pasteText').value = '';
-    showScanStatus('');
+    showPasteStatus('');
     updateCoffeeGrindHint();
     switchScreenView('coffeeEditorScreen');
   }
@@ -2015,18 +2010,9 @@
     switchScreenView('setupScreen');
   }
 
-  /* ---------- Scanning a coffee bag ----------
-     Scan bag reads the photo on the device with Tesseract.js (vendor/tesseract/, loaded on the first scan; the
-     service worker and Tesseract's own cache keep it for offline use). The recognised text goes into the paste box,
-     so it can be corrected, and parseLabelText() turns it into the editor's fields for the user to check.
-     Paste label text runs the same parser on text copied from the bag, e.g. with iPhone Live Text. */
-  // Each scan reads the photo at these sizes (long edge, px) and combines the results. Small print on a bag is often
-  // only readable when enlarged, and each size catches lines the other misses.
-  const SCAN_PASS_EDGES = [2500, 3500];
-  // iOS refuses canvases much bigger than 16 megapixels
-  const SCAN_MAX_PIXELS = 12e6;
-  // Lines Tesseract is less sure of than this (0-100) are usually graphics or texture, not text
-  const OCR_MIN_LINE_CONFIDENCE = 40;
+  /* ---------- Paste label text ----------
+     Fills Add a Coffee from text copied off a bag (e.g. with iPhone Live Text). parseLabelText() turns the text into
+     the editor's fields, and the user checks them before saving. */
   const COFFEE_ORIGINS = ['Ethiopia', 'Kenya', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda', 'Yemen', 'Colombia', 'Brazil',
     'Peru', 'Bolivia', 'Ecuador', 'Guatemala', 'Costa Rica', 'Honduras', 'El Salvador', 'Nicaragua', 'Panama', 'Mexico',
     'Sumatra', 'Indonesia', 'Papua New Guinea', 'India', 'Vietnam', 'China', 'Myanmar', 'Thailand', 'Jamaica', 'Hawaii'];
@@ -2052,155 +2038,13 @@
     'biscuit', 'cookie', 'toast', 'smoky', 'liquorice', 'licorice', 'blossom', 'lemongrass', 'stone fruits'];
   // Printed on many bags but never the coffee's name: grind options, certifications, slogans
   const LABEL_BOILERPLATE = /whole ?bea|\bground\b|filter|espresso|cafeti|aeropress|stove ?top|moka|french press|cold brew|single origin|for the planet|\bplanet\b|\bmember\b|b corp|fair ?trade|organic|rainforest|recycl|compost|best before|roast(ed)? on|roast date|net (wt|weight)|freshly roasted|great coffee|made simple|speciality coffee|specialty coffee/i;
-  let ocrWorker = null;
-  let ocrProgress = () => {};
-  let ocrPass = '';
 
   /* kind: 'info', 'ok' or 'error'; an empty message hides the line */
-  function showScanStatus(message, kind = 'info') {
-    const status = document.getElementById('scanStatus');
+  function showPasteStatus(message, kind = 'info') {
+    const status = document.getElementById('pasteStatus');
     const color = kind === 'error' ? 'text-rose-400' : kind === 'ok' ? 'text-emerald-400' : 'text-slate-300';
     status.className = `${message ? '' : 'hidden '}text-[11px] font-bold leading-snug ${color}`;
     status.innerText = message;
-  }
-
-  function chooseScanPhoto() {
-    triggerHapticFeedback();
-    const input = document.getElementById('scanPhotoInput');
-    input.value = '';
-    input.click();
-  }
-
-  async function loadPhoto(file) {
-    const url = URL.createObjectURL(file);
-    try {
-      const img = new Image();
-      img.src = url;
-      await img.decode();
-      return img;
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  }
-
-  /* The photo scaled (up or down) so its long edge is longEdge px, within SCAN_MAX_PIXELS */
-  function drawScaled(img, longEdge) {
-    let scale = longEdge / Math.max(img.naturalWidth, img.naturalHeight);
-    scale = Math.min(scale, Math.sqrt(SCAN_MAX_PIXELS / (img.naturalWidth * img.naturalHeight)));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas;
-  }
-
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error(`Couldn't load ${src}`));
-      document.head.appendChild(script);
-    });
-  }
-
-  /* One Tesseract worker, created on the first scan and kept for later ones */
-  async function getOcrWorker() {
-    if (ocrWorker) return ocrWorker;
-    if (!window.Tesseract) await loadScript('vendor/tesseract/tesseract.min.js');
-    // The worker runs from a blob URL, so every path it loads must be absolute
-    const base = new URL('vendor/tesseract/', location.href).href;
-    ocrWorker = await Tesseract.createWorker('eng', Tesseract.OEM.LSTM_ONLY, {
-      workerPath: `${base}worker.min.js`,
-      corePath: base,
-      langPath: base,
-      gzip: true,
-      logger: message => ocrProgress(message)
-    });
-    // Find the text blocks automatically (Tesseract.js otherwise treats the photo as one block), which copes far
-    // better with labels laid out in boxes and columns
-    await ocrWorker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.AUTO });
-    return ocrWorker;
-  }
-
-  /* Recognised lines Tesseract is reasonably sure of, as { text, confidence }, cleaned of stray symbols */
-  function getOcrLines(data) {
-    const lines = [];
-    (data.blocks || []).forEach(block => (block.paragraphs || []).forEach(paragraph => (paragraph.lines || []).forEach(line => {
-      if (line.confidence < OCR_MIN_LINE_CONFIDENCE) return;
-      const text = line.text
-        .replace(/[^\p{L}\p{N}\s.,:;'’&%°/()+\-–·|\[\]]/gu, ' ')
-        // Checkboxes and icons read as brackets at the start of a line, e.g. "[J Filter" or "(] Espresso"
-        .replace(/^(?:\S{0,2}[\[\](){}|]\S{0,2}\s+)+/u, '')
-        .replace(/[\[\]{}]/g, ' ')
-        .replace(/\s+/g, ' ').trim();
-      // Keep lines that are mostly letters or digits: the rest is usually noise from patterns and pictures
-      if (text.length >= 2 && (text.match(/[\p{L}\p{N}]/gu) || []).length / text.length >= 0.6) {
-        lines.push({ text, confidence: line.confidence });
-      }
-    })));
-    return lines;
-  }
-
-  /* Combines the passes: the best-scoring pass in its own order, then any lines only the other passes found */
-  function mergeOcrPasses(passes) {
-    const score = lines => lines.reduce((sum, line) => sum + (line.text.match(/\p{L}/gu) || []).length * line.confidence, 0);
-    const ordered = passes.slice().sort((a, b) => score(b) - score(a));
-    const key = text => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-    const merged = [];
-    ordered.forEach(lines => lines.forEach(({ text }) => {
-      const k = key(text);
-      if (k && !merged.some(existing => key(existing).includes(k))) merged.push(text);
-    }));
-    return merged.join('\n');
-  }
-
-  async function scanPhoto(input) {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    const button = document.getElementById('btnScanBag');
-    button.disabled = true;
-    showScanStatus('Getting the text reader ready…');
-    ocrProgress = message => {
-      if (message.status === 'recognizing text') {
-        showScanStatus(`Reading the label (pass ${ocrPass})… ${Math.round((message.progress || 0) * 100)}%`);
-      } else if (/loading/.test(message.status || '')) {
-        showScanStatus(`Getting the text reader ready… ${Math.round((message.progress || 0) * 100)}%`);
-      }
-    };
-    try {
-      const img = await loadPhoto(file);
-      const worker = await getOcrWorker();
-      const passes = [];
-      for (let i = 0; i < SCAN_PASS_EDGES.length; i++) {
-        ocrPass = `${i + 1} of ${SCAN_PASS_EDGES.length}`;
-        const { data } = await worker.recognize(drawScaled(img, SCAN_PASS_EDGES[i]), {}, { text: true, blocks: true });
-        passes.push(getOcrLines(data));
-      }
-      const text = mergeOcrPasses(passes);
-      if (!text.trim()) {
-        showScanStatus("Couldn't find any text. Try a closer, well-lit photo with the label flat and straight on.", 'error');
-        return;
-      }
-      // Show what was read, so it can be corrected and filled in again
-      document.getElementById('pasteText').value = text;
-      setPastePanelOpen(true);
-      applyLabelDetails(parseLabelText(text), 'photo');
-    } catch (e) {
-      // A failed start (e.g. offline before the first download) shouldn't stick: try again from scratch next time
-      if (ocrWorker) {
-        try { await ocrWorker.terminate(); } catch (err) {}
-      }
-      ocrWorker = null;
-      showScanStatus(navigator.onLine
-        ? "Couldn't read that photo. Try another one, or use Paste label text."
-        : 'The text reader needs a connection the first time you scan. Paste label text works offline.', 'error');
-    } finally {
-      ocrProgress = () => {};
-      button.disabled = false;
-    }
   }
 
   function getBuiltInCoffeeKeys() {
@@ -2222,7 +2066,7 @@
   }
 
   /* Fills the editor from label details: { name, roaster, origin, process, variety, altitude, roast, notes, tempC } */
-  function applyLabelDetails(d, source) {
+  function applyLabelDetails(d) {
     const title = [d.name || d.origin, d.roaster].map(part => (part || '').trim()).filter(Boolean).join(' · ');
     if (title) document.getElementById('coffeeName').value = title.slice(0, 50);
 
@@ -2237,11 +2081,9 @@
     if (notes) document.getElementById('coffeeNotes').value = notes.slice(0, 300);
 
     updateCoffeeGrindHint();
-    const from = source === 'photo' ? 'the photo' : 'the pasted text';
-    const fix = source === 'photo' ? ' If something was misread, correct the text above and tap Fill in from text.' : '';
-    showScanStatus(title
-      ? `Filled in from ${from}. Check the details, then tap Save Coffee.${fix}`
-      : `Filled in what I could from ${from}, but couldn't find a name. Add one, check the rest, then tap Save Coffee.${fix}`, 'ok');
+    showPasteStatus(title
+      ? 'Filled in from the pasted text. Check the details, then tap Save Coffee.'
+      : "Filled in what I could, but couldn't find a name. Add one, check the rest, then tap Save Coffee.", 'ok');
   }
 
   function setPastePanelOpen(open) {
@@ -2257,7 +2099,7 @@
     if (opening) document.getElementById('pasteText').focus();
   }
 
-  /* Pulls label details out of label text (from a scan or pasted). Heuristic, so the user always reviews the result. */
+  /* Pulls label details out of label text. Heuristic, so the user always reviews the result. */
   function parseLabelText(text) {
     const lines = text.split(/\r?\n/).map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
     const all = lines.join('\n');
@@ -2358,7 +2200,7 @@
       // "roast" but not "Roasters" or "Roastery", which are usually part of the roaster's name
       /[:]|roast(?!ers?\b|ery\b)|notes|process|washed|natural|hulled|honey|anaerobic|ferment|carbonic|altitude|elevation|masl|variet|weight|net wt|grams|\d{2,}|www\.|\.com|@/i.test(line);
     const isNameLike = line => line.length >= 3 && line.length <= 40 && /\p{L}{3}/u.test(line) &&
-      // Mostly real words, not OCR debris like "i ORIGIN"
+      // Mostly real words, not debris like "i ORIGIN"
       !/^\p{Ll}\s/u.test(line) && line.split(' ').filter(word => /\p{L}{2}/u.test(word)).length >= Math.ceil(line.split(' ').length / 2);
     let name = '';
     let roaster = '';
@@ -2385,10 +2227,10 @@
     triggerHapticFeedback();
     const text = document.getElementById('pasteText').value;
     if (!text.trim()) {
-      showScanStatus('Paste the text from the bag first.', 'error');
+      showPasteStatus('Paste the text from the bag first.', 'error');
       return;
     }
-    applyLabelDetails(parseLabelText(text), 'text');
+    applyLabelDetails(parseLabelText(text));
   }
 
   /* ---------- Display settings: temperature unit, text size, motion ---------- */
@@ -3307,11 +3149,26 @@
 
   applyDisplaySettings();
 
-  // Scanning no longer uses an API key: remove any saved by the earlier Claude-based scanner
+  // Photo scanning was removed: delete what earlier versions stored for it (an API key and model choice from the
+  // Claude scanner, and the English text model that the on-device scanner cached in IndexedDB)
   try {
     localStorage.removeItem('bg_api_key');
     localStorage.removeItem('bg_scan_model');
   } catch (e) {}
+  // (Only if that database exists: opening it would otherwise create an empty one)
+  if (window.indexedDB && indexedDB.databases) {
+    indexedDB.databases().then(databases => {
+      if (!databases.some(database => database.name === 'keyval-store')) return;
+      const request = indexedDB.open('keyval-store');
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('keyval')) return db.close();
+        const store = db.transaction('keyval', 'readwrite').objectStore('keyval');
+        const keys = store.getAllKeys();
+        keys.onsuccess = () => keys.result.filter(key => String(key).includes('traineddata')).forEach(key => store.delete(key));
+      };
+    }).catch(() => {});
+  }
 
   if (loadActiveBrew()) {
     showResumeScreen();
