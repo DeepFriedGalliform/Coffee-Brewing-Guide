@@ -17,13 +17,31 @@
   <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
-
+  <!-- Chart.js and Inter are served from vendor/ so the app works offline from the first visit (npm run vendor) -->
+  <link rel="preload" href="vendor/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="vendor/chart.umd.min.js"></script>
+  <script>
+    // Apply the text size and motion settings before the first paint (applyDisplaySettings() keeps them in sync)
+    (function () {
+      try {
+        var root = document.documentElement;
+        root.classList.toggle('text-large', localStorage.getItem('bg_text_size') === 'large');
+        root.classList.toggle('reduce-motion', localStorage.getItem('bg_motion') === 'reduce' ||
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      } catch (e) {}
+    })();
+  </script>
   <style>
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url('vendor/inter-latin-wght-normal.woff2') format('woff2-variations'), url('vendor/inter-latin-wght-normal.woff2') format('woff2');
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+
     :root {
       --pad-top: max(12px, env(safe-area-inset-top));
       --pad-bottom: max(12px, env(safe-area-inset-bottom));
@@ -90,10 +108,26 @@
       0%, 100% { box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(0, 168, 135, 0.45); }
       50% { box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(0, 168, 135, 0); }
     }
-    @media (prefers-reduced-motion: reduce) {
-      .pour-glow, .animate-pulse { animation: none; }
-      .screen-view, #ringSvg { transition: none; }
-    }
+    /* Reduced motion: set by the Motion setting, which follows the phone's Reduce Motion setting on Auto */
+    .reduce-motion .pour-glow, .reduce-motion .animate-pulse { animation: none; }
+    .reduce-motion .screen-view, .reduce-motion #ringSvg, .reduce-motion #unifiedStatusBubble { transition: none; }
+    .reduce-motion #ringMarker { display: none; }
+
+    /* Large text setting: every small size steps up, and the brew timer and instructions get bigger */
+    .text-large .text-\[9px\] { font-size: 11px; }
+    .text-large .text-\[10px\] { font-size: 12px; }
+    .text-large .text-\[11px\] { font-size: 13px; }
+    .text-large .text-\[13px\] { font-size: 15px; }
+    .text-large .text-xs { font-size: 14px; line-height: 1.25rem; }
+    .text-large .text-sm { font-size: 16px; line-height: 1.5rem; }
+    .text-large .text-base { font-size: 18px; line-height: 1.75rem; }
+    .text-large #totalElapsedTimer { font-size: 1.875rem; line-height: 2.25rem; }
+    .text-large #stepTitleHeader { font-size: 1.25rem; line-height: 1.75rem; }
+    /* ...except in the tightest spots, which only step up a little so they still fit a small phone */
+    .text-large [aria-label="Coffee type"] { font-size: 12px; }
+    .text-large [data-brew-field] .text-\[9px\] { font-size: 10px; }
+    .text-large [data-brew-field] .text-\[13px\] { font-size: 14px; }
+    .text-large #profileCardsContainer .text-\[11px\] { font-size: 12px; }
 
     .screen-view {
       transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
@@ -126,6 +160,14 @@
 
 <!-- Main Application Card Container -->
 <div class="w-full max-w-md app-card-container bg-cardBg rounded-3xl border border-borderDark/90 p-4 sm:p-5 shadow-depth-card flex flex-col justify-between relative overflow-hidden">
+
+  <div id="updateBanner" role="status" class="hidden absolute top-3 left-3 right-3 z-50 bg-darkBg border border-bronze/60 rounded-2xl pl-3.5 pr-2 py-2 shadow-depth-card flex items-center justify-between gap-2">
+    <span class="text-[11px] font-bold text-slate-200 leading-snug">A new version of Brew Guide is ready.</span>
+    <div class="flex items-center gap-1 shrink-0">
+      <button onclick="dismissUpdate()" class="text-[11px] font-bold text-slate-400 hover:text-white px-2 py-1.5">Later</button>
+      <button onclick="location.reload()" class="bg-bronze text-slate-950 text-[11px] font-extrabold px-3 py-1.5 rounded-lg shadow-depth-button active:scale-95">Reload</button>
+    </div>
+  </div>
   
   <!-- ==================== 1. SETUP / RECIPE SCREEN ==================== -->
   <div id="setupScreen" class="screen-view visible-view flex-col justify-between">
@@ -197,7 +239,7 @@
 
         <div>
           <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">COFFEE TYPE</span>
-          <div role="group" aria-label="Coffee type" class="grid grid-cols-3 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-xs font-bold gap-1">
+          <div role="group" aria-label="Coffee type" class="grid grid-cols-4 bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-xs font-bold gap-1">
             <button id="btnTypeStandard" onclick="setCoffeeType('standard')" class="py-2.5 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button uppercase active:scale-95">
               STANDARD
             </button>
@@ -206,6 +248,9 @@
             </button>
             <button id="btnTypeRegional" onclick="setCoffeeType('regional')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95">
               REGIONAL
+            </button>
+            <button id="btnTypeMine" onclick="setCoffeeType('mine')" class="py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95">
+              MINE
             </button>
           </div>
         </div>
@@ -259,6 +304,32 @@
         <p id="calibrationNote" class="text-[10px] text-slate-400 leading-relaxed mt-1"></p>
       </div>
 
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 block">DISPLAY</span>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[11px] font-bold text-slate-300">Temperature</span>
+          <div role="group" aria-label="Temperature unit" class="grid bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-[11px] font-bold gap-1 grid-cols-2 w-40 shrink-0">
+            <button id="btnTempC" type="button" onclick="setTempUnit('C')">°C</button>
+            <button id="btnTempF" type="button" onclick="setTempUnit('F')">°F</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[11px] font-bold text-slate-300">Text size</span>
+          <div role="group" aria-label="Text size" class="grid bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-[11px] font-bold gap-1 grid-cols-2 w-40 shrink-0">
+            <button id="btnTextStandard" type="button" onclick="setTextSize('standard')">Standard</button>
+            <button id="btnTextLarge" type="button" onclick="setTextSize('large')">Large</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[11px] font-bold text-slate-300">Motion</span>
+          <div role="group" aria-label="Motion" class="grid bg-darkBg/90 p-1 rounded-xl border border-borderDark/80 shadow-depth-inner text-[11px] font-bold gap-1 grid-cols-2 w-40 shrink-0">
+            <button id="btnMotionAuto" type="button" onclick="setMotion('auto')">Auto</button>
+            <button id="btnMotionReduce" type="button" onclick="setMotion('reduce')">Reduced</button>
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-relaxed">Reduced motion keeps the brew ring still and turns off the pulsing and the water ripple. Auto follows your phone's Reduce Motion setting.</p>
+      </div>
+
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">BACKUP</span>
         <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
@@ -269,13 +340,52 @@
         </div>
         <input id="importFile" type="file" accept=".json,application/json,text/plain" class="hidden" onchange="importSettingsFile(this)">
         <p id="backupStatus" role="status" class="hidden text-[11px] font-bold"></p>
-        <p class="text-[10px] text-slate-400 leading-relaxed">Your settings are stored only on this device. Export saves your method, brew size, coffee type, voice, grinder, custom grinder and grind settings, so you can restore them on a new phone or after reinstalling. Importing replaces your current settings.</p>
+        <p class="text-[10px] text-slate-400 leading-relaxed">Your settings are stored only on this device. Export saves your coffees, method, brew size, grinder, custom grinder, grind settings and display options, so you can restore them on a new phone or after reinstalling. Importing replaces your current settings.</p>
       </div>
     </div>
 
     <button onclick="closeSettings()" class="w-full mt-3 bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 rounded-2xl text-sm shadow-depth-button active:scale-[0.98] transition-all">
       Done
     </button>
+  </div>
+
+  <!-- ==================== 1.6. COFFEE EDITOR SCREEN ==================== -->
+  <div id="coffeeEditorScreen" class="screen-view hidden-view flex-col justify-between">
+    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-0.5">
+      <div class="text-center pt-1">
+        <h2 id="coffeeEditorTitle" class="text-xl font-extrabold text-white drop-shadow">Add a Coffee</h2>
+      </div>
+
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
+        <label class="text-[10px] font-bold text-slate-300">Name
+          <input id="coffeeName" type="text" maxlength="50" placeholder="e.g. Ethiopia Guji, Square Mile" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze">
+        </label>
+        <label class="text-[10px] font-bold text-slate-300">Similar to
+          <select id="coffeeBase" onchange="onCoffeeBaseChange()" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze"></select>
+          <span class="block font-normal text-slate-400 leading-relaxed mt-1">Sets the starting water temperature and grind. You can change both below.</span>
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="text-[10px] font-bold text-slate-300"><span id="coffeeTempLabel">Water temp (°C)</span>
+            <input id="coffeeTemp" type="number" inputmode="decimal" step="any" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze font-mono">
+          </label>
+          <label class="text-[10px] font-bold text-slate-300">Grind
+            <input id="coffeeGrind" type="number" inputmode="decimal" step="any" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze font-mono placeholder:text-slate-500">
+          </label>
+        </div>
+        <p id="coffeeGrindHint" class="text-[10px] text-slate-400 leading-relaxed"></p>
+        <label class="text-[10px] font-bold text-slate-300">Tasting notes (optional)
+          <textarea id="coffeeNotes" rows="3" maxlength="300" placeholder="Shown when your brew is finished" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze resize-none"></textarea>
+        </label>
+        <p id="coffeeEditorError" class="hidden text-[11px] font-bold text-rose-400"></p>
+      </div>
+
+      <button id="btnDeleteCoffee" type="button" onclick="deleteCoffee()" class="hidden w-full bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 font-extrabold py-2.5 rounded-xl border border-rose-500/40 text-xs active:scale-[0.98] transition-all">Delete this coffee</button>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2.5 w-full pt-3">
+      <button onclick="closeCoffeeEditor()" class="col-span-1 bg-darkBg hover:bg-borderDark text-slate-300 font-bold py-3 rounded-2xl border border-borderDark shadow-depth-button text-xs transition-all active:scale-95">Cancel</button>
+      <button onclick="saveCoffee()" class="col-span-2 bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 rounded-2xl text-sm shadow-depth-button active:scale-[0.98] transition-all">Save Coffee</button>
+    </div>
   </div>
 
   <!-- ==================== 2. SELF-PACED PREPARE SCREEN ==================== -->
@@ -374,6 +484,21 @@
         <span>Cancel</span>
       </button>
       <button onclick="skipCountdown()" class="col-span-2 bg-darkBg hover:bg-borderDark text-slate-300 font-bold py-3 rounded-2xl border border-borderDark shadow-depth-button text-xs transition-all active:scale-95">Skip Countdown & Start Now</button>
+    </div>
+  </div>
+
+  <!-- ==================== 2.6. RESUME BREW SCREEN ==================== -->
+  <div id="resumeScreen" class="screen-view hidden-view flex-col items-center justify-between py-12">
+    <div></div>
+    <div class="flex flex-col items-center gap-3 text-center px-2">
+      <span class="px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase border bg-volvic/15 text-volvic border-volvic/40 shadow-sm">Brew in progress</span>
+      <span id="resumeElapsed" class="text-6xl font-black text-white font-mono tabular-nums tracking-tight drop-shadow-lg">00:00</span>
+      <p id="resumeDetails" class="text-xs font-bold text-slate-200 leading-relaxed"></p>
+      <p id="resumeNote" class="text-[11px] text-slate-400 leading-relaxed"></p>
+    </div>
+    <div class="w-full grid grid-cols-3 gap-2.5">
+      <button onclick="discardSavedBrew()" class="col-span-1 bg-darkBg hover:bg-borderDark text-slate-300 font-bold py-3 rounded-2xl border border-borderDark shadow-depth-button text-xs transition-all active:scale-95">Discard</button>
+      <button onclick="resumeSavedBrew()" class="col-span-2 bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 rounded-2xl text-sm shadow-depth-button active:scale-[0.98] transition-all">Resume Brew</button>
     </div>
   </div>
 
@@ -566,27 +691,55 @@
 </div>
 
 <script>
+  /* ---------- Offline support and updates ----------
+     sw.js caches each release. When a new release takes over this page, offer a reload, but never during a brew. */
+  let swRegistration = null;
+  let updateReady = false;
+  let updateDismissed = false;
   if ('serviceWorker' in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) return; // first install: this page is already the latest version
+      updateReady = true;
+      showUpdateBannerIfIdle();
+    });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js').then(reg => { swRegistration = reg; }).catch(() => {});
+    });
+    // A Home Screen app can stay open for days, so check for a new release whenever it comes back to the front
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && swRegistration) swRegistration.update().catch(() => {});
     });
   }
 
+  function showUpdateBannerIfIdle() {
+    const busy = ['countdownScreen', 'brewScreen', 'resumeScreen'].some(id => document.getElementById(id).classList.contains('visible-view'));
+    document.getElementById('updateBanner').classList.toggle('hidden', !updateReady || updateDismissed || busy);
+  }
+
+  function dismissUpdate() {
+    updateDismissed = true;
+    showUpdateBannerIfIdle();
+  }
+
   // `ode` is each coffee's base grind on the Fellow Ode Gen 2 dial (V60, 250 g). Other grinders are converted from it.
+  // `temp` is the water temperature in °C. The user's own coffees are added with the category "mine".
   const coffeeData = {
-    light_high: { category: "standard", name: "Light Roast / High Elevation", temp: "96°C", notes: "Bright jasmine florals, sparkling citrus acidity, and clean tea-like sweetness.", ode: 5.1 },
-    medium_light: { category: "standard", name: "Medium / Light Roast", temp: "93°C", notes: "Vibrant stone fruit, red berry notes, and refined cane sugar sweetness.", ode: 5.2 },
-    medium_classic: { category: "standard", name: "Medium Roast / Classic", temp: "91°C", notes: "Balanced caramel sweetness, milk chocolate, rounded apple acidity, and smooth finish.", ode: 6.0 },
-    dark_low: { category: "standard", name: "Dark Roast / Low Acidity", temp: "85°C", notes: "Deep dark chocolate, smoky molasses, low acidity, and heavy velvety body.", ode: 6.3 },
-    pact_light: { category: "pact", name: "Pact Specialty Light", temp: "93°C", notes: "Elegantly light body with crisp bergamot, honeysuckle, and stone fruit complexity.", ode: 5.2 },
-    pact_fruit: { category: "pact", name: "Pact Fruit & Floral", temp: "94°C", notes: "Juicy raspberry, ripe peach notes, tropical sweetness, and floral aromas.", ode: 5.1 },
-    pact_choc: { category: "pact", name: "Pact Chocolate & Nutty", temp: "92°C", notes: "Comforting hazelnut praline, milk chocolate, toasted oats, and balanced caramel body.", ode: 6.0 },
-    pact_dark: { category: "pact", name: "Pact Dark Roast / Bold Espresso Blend", temp: "88°C", notes: "Rich cocoa nibs, dark treacle, robust crema character, and lingering spiced finish.", ode: 6.2 },
-    african_washed: { category: "regional", name: "African Washed (Yirgacheffe/Kenya)", temp: "96°C", notes: "High elevation Ethiopian/Kenyan character with lemongrass, black tea, and intense citrus clarity.", ode: 5.0 },
-    central_american: { category: "regional", name: "Central American (Guatemala/Costa Rica)", temp: "92°C", notes: "Smooth honey sweetness, red apple, roasted almond, and clean balanced finish.", ode: 6.0 },
-    natural_process: { category: "regional", name: "Natural Process (Eth/Bra)", temp: "90°C", notes: "Complex anaerobic fermentation notes, dried mango, blueberry jam, and winey sweetness.", ode: 5.3 },
-    sumatran_dark: { category: "regional", name: "Sumatran Dark / Pacific", temp: "86°C", notes: "Earthy, cedary, dark chocolate, low acidity, and full syrup-like mouthfeel.", ode: 6.3 }
+    light_high: { category: "standard", name: "Light Roast / High Elevation", temp: 96, notes: "Bright jasmine florals, sparkling citrus acidity, and clean tea-like sweetness.", ode: 5.1 },
+    medium_light: { category: "standard", name: "Medium / Light Roast", temp: 93, notes: "Vibrant stone fruit, red berry notes, and refined cane sugar sweetness.", ode: 5.2 },
+    medium_classic: { category: "standard", name: "Medium Roast / Classic", temp: 91, notes: "Balanced caramel sweetness, milk chocolate, rounded apple acidity, and smooth finish.", ode: 6.0 },
+    dark_low: { category: "standard", name: "Dark Roast / Low Acidity", temp: 85, notes: "Deep dark chocolate, smoky molasses, low acidity, and heavy velvety body.", ode: 6.3 },
+    pact_light: { category: "pact", name: "Pact Specialty Light", temp: 93, notes: "Elegantly light body with crisp bergamot, honeysuckle, and stone fruit complexity.", ode: 5.2 },
+    pact_fruit: { category: "pact", name: "Pact Fruit & Floral", temp: 94, notes: "Juicy raspberry, ripe peach notes, tropical sweetness, and floral aromas.", ode: 5.1 },
+    pact_choc: { category: "pact", name: "Pact Chocolate & Nutty", temp: 92, notes: "Comforting hazelnut praline, milk chocolate, toasted oats, and balanced caramel body.", ode: 6.0 },
+    pact_dark: { category: "pact", name: "Pact Dark Roast / Bold Espresso Blend", temp: 88, notes: "Rich cocoa nibs, dark treacle, robust crema character, and lingering spiced finish.", ode: 6.2 },
+    african_washed: { category: "regional", name: "African Washed (Yirgacheffe/Kenya)", temp: 96, notes: "High elevation Ethiopian/Kenyan character with lemongrass, black tea, and intense citrus clarity.", ode: 5.0 },
+    central_american: { category: "regional", name: "Central American (Guatemala/Costa Rica)", temp: 92, notes: "Smooth honey sweetness, red apple, roasted almond, and clean balanced finish.", ode: 6.0 },
+    natural_process: { category: "regional", name: "Natural Process (Eth/Bra)", temp: 90, notes: "Complex anaerobic fermentation notes, dried mango, blueberry jam, and winey sweetness.", ode: 5.3 },
+    sumatran_dark: { category: "regional", name: "Sumatran Dark / Pacific", temp: 86, notes: "Earthy, cedary, dark chocolate, low acidity, and full syrup-like mouthfeel.", ode: 6.3 }
   };
+
+  const COFFEE_TYPES = ['standard', 'pact', 'regional', 'mine'];
 
   function getGrindTextureLabel(setting) {
     if (setting < 5.3) return "Medium-Fine — Table Salt";
@@ -782,7 +935,8 @@
       .sort((a, b) => a.ode - b.ode);
   }
 
-  function convertFromOde(odeValue, grinder = getGrinder()) {
+  /* The grinder setting for an Ode value, before snapping to the dial */
+  function rawConvertFromOde(odeValue, grinder = getGrinder()) {
     const points = getCalibrationPoints(grinder.key);
     let value;
     if (points.length === 0) {
@@ -795,7 +949,23 @@
       const a = points[i], b = points[i + 1];
       value = a.value + (odeValue - a.ode) * (b.value - a.value) / (b.ode - a.ode);
     }
-    return snapToGrinder(value, grinder);
+    return value;
+  }
+
+  function convertFromOde(odeValue, grinder = getGrinder()) {
+    return snapToGrinder(rawConvertFromOde(odeValue, grinder), grinder);
+  }
+
+  /* The Ode value that converts to a setting on this grinder. Conversion only ever rises or falls, so bisect. */
+  function convertToOde(value, grinder = getGrinder()) {
+    let lo = -20, hi = 40;
+    const rising = rawConvertFromOde(hi, grinder) >= rawConvertFromOde(lo, grinder);
+    for (let i = 0; i < 60; i++) {
+      const mid = (lo + hi) / 2;
+      if ((rawConvertFromOde(mid, grinder) < value) === rising) lo = mid;
+      else hi = mid;
+    }
+    return (lo + hi) / 2;
   }
 
   function formatGrind(value, grinder = getGrinder()) {
@@ -844,7 +1014,7 @@
   let currentWater = parseInt(localStorage.getItem('bg_water')) || roundWater(currentDose * targetRatio);
   let currentGrinderKey = GRINDERS[localStorage.getItem('bg_grinder')] ? localStorage.getItem('bg_grinder') : 'ode2';
   let customGrinder = loadCustomGrinder();
-  let currentCoffeeType = localStorage.getItem('bg_type') || 'standard';
+  let currentCoffeeType = COFFEE_TYPES.includes(localStorage.getItem('bg_type')) ? localStorage.getItem('bg_type') : 'standard';
   let selectedCoffeeKey = 'medium_classic';
   
   let brewStartTime = 0;
@@ -872,7 +1042,7 @@
   const DRAWDOWN_OVERTIME_LIMIT = 300;
 
   function switchScreenView(activeScreenId) {
-    const screens = ['setupScreen', 'settingsScreen', 'prepScreen', 'countdownScreen', 'brewScreen', 'summaryScreen'];
+    const screens = ['setupScreen', 'settingsScreen', 'coffeeEditorScreen', 'prepScreen', 'countdownScreen', 'resumeScreen', 'brewScreen', 'summaryScreen'];
     screens.forEach(id => {
       const el = document.getElementById(id);
       if (id === activeScreenId) {
@@ -883,6 +1053,7 @@
         el.classList.add('hidden-view');
       }
     });
+    showUpdateBannerIfIdle();
   }
 
   async function requestWakeLock() {
@@ -1271,7 +1442,7 @@
 
     const activeClass = "py-2.5 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button uppercase active:scale-95";
     const inactiveClass = "py-2.5 rounded-lg transition-all text-slate-400 hover:text-white uppercase active:scale-95";
-    applyToggle({ standard: 'btnTypeStandard', pact: 'btnTypePact', regional: 'btnTypeRegional' }, type, activeClass, inactiveClass);
+    applyToggle({ standard: 'btnTypeStandard', pact: 'btnTypePact', regional: 'btnTypeRegional', mine: 'btnTypeMine' }, type, activeClass, inactiveClass);
 
     const filteredKeys = Object.keys(coffeeData).filter(key => coffeeData[key].category === type);
     if (filteredKeys.length > 0) {
@@ -1281,11 +1452,16 @@
     renderCoffeeProfileCards();
   }
 
+  /* How much coarser than the coffee's base setting this method and brew size grind, on the Ode scale */
+  function getOdeOffset() {
+    const method = RECIPES[currentMethod] || RECIPES.v60;
+    return method.grindOffset + getRecipeScale(getWater()) * GRIND_OFFSET_PER_250G;
+  }
+
   /* The recipe's grind on the Ode Gen 2 scale: coffee base + method offset + batch-size offset */
   function getOdeSetting(coffeeKey) {
     const data = coffeeData[coffeeKey] || coffeeData['medium_classic'];
-    const method = RECIPES[currentMethod] || RECIPES.v60;
-    return data.ode + method.grindOffset + getRecipeScale(getWater()) * GRIND_OFFSET_PER_250G;
+    return data.ode + getOdeOffset();
   }
 
   /* The recipe's grind on the user's grinder */
@@ -1316,6 +1492,14 @@
     });
 
     const filteredKeys = Object.keys(coffeeData).filter(key => coffeeData[key].category === currentCoffeeType);
+    const isMine = currentCoffeeType === 'mine';
+
+    if (isMine && filteredKeys.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = "text-[11px] text-slate-400 leading-relaxed px-0.5";
+      empty.innerText = "Add the coffees you buy, with your own grind, water temperature and tasting notes. They're scaled to every method and brew size like the built-in profiles.";
+      container.appendChild(empty);
+    }
 
     filteredKeys.forEach((key) => {
       const item = coffeeData[key];
@@ -1327,8 +1511,8 @@
       card.onclick = () => selectProfileAndProceed(key);
 
       card.innerHTML = `
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-white group-hover:text-bronze transition-colors">${item.name}</span>
+        <div class="flex items-center justify-between ${isMine ? 'pr-9' : ''}">
+          <span class="text-xs font-bold text-white group-hover:text-bronze transition-colors">${escapeHTML(item.name)}</span>
         </div>
         <div class="w-full h-3 bg-darkBg rounded-full overflow-hidden flex border border-borderDark/50 shadow-inner">
           ${barSegmentsHTML}
@@ -1336,13 +1520,37 @@
         <div class="flex items-center justify-between text-[11px] font-bold text-slate-200 px-0.5">
           <div class="flex items-center gap-1"><span>🫘</span><span>${doseText}</span></div>
           <div class="flex items-center gap-1"><span>💧</span><span>${waterText}</span></div>
-          <div class="flex items-center gap-1"><span>🌡️</span><span>${item.temp}</span></div>
+          <div class="flex items-center gap-1"><span>🌡️</span><span>${formatTemp(item.temp)}</span></div>
           <div class="flex items-center gap-1"><span>⚙️</span><span>${grindSetting}</span></div>
           <div class="flex items-center gap-1 font-mono"><span>⏱️</span><span>${formattedTotalTime}</span></div>
         </div>
       `;
-      container.appendChild(card);
+      if (!isMine) {
+        container.appendChild(card);
+        return;
+      }
+      // Your own coffees get an edit button (outside the card button, since buttons can't be nested)
+      const wrapper = document.createElement('div');
+      wrapper.className = "relative shrink-0";
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = "absolute top-1.5 right-1.5 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-bronze active:scale-95 transition-all";
+      edit.setAttribute('aria-label', `Edit ${item.name}`);
+      edit.title = 'Edit';
+      edit.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.232-6.232a2.5 2.5 0 113.536 3.536L12.536 16.536 8 18l1.464-4.536z"></path></svg>`;
+      edit.onclick = () => openCoffeeEditor(key);
+      wrapper.append(card, edit);
+      container.appendChild(wrapper);
     });
+
+    if (isMine) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = "w-full shrink-0 border border-dashed border-borderDark hover:border-bronze/60 text-slate-300 hover:text-bronze rounded-2xl py-3 text-xs font-bold transition-all active:scale-[0.98]";
+      add.innerText = '+ Add a coffee';
+      add.onclick = () => openCoffeeEditor(null);
+      container.appendChild(add);
+    }
   }
 
   function selectProfileAndProceed(key) {
@@ -1357,7 +1565,7 @@
     const waterGrams = getWater();
     const doseGrams = `${currentDose.toFixed(1)}g`;
 
-    document.getElementById('prepInstructionBoil').innerText = `Boil at least ${waterGrams}ml water to ${data.temp}.`;
+    document.getElementById('prepInstructionBoil').innerText = `Boil at least ${waterGrams}ml water to ${formatTemp(data.temp)}.`;
     document.getElementById('prepInstructionWeigh').innerText = `Weigh ${doseGrams} coffee beans.`;
     document.getElementById('prepInstructionGrind').innerText = `Grind to ${describeGrind(getGrindSetting(selectedCoffeeKey))} on your ${getGrinder().name} (${getGrindTextureLabel(odeSetting)}).`;
 
@@ -1384,6 +1592,7 @@
     document.getElementById('customStep').value = c.step;
     document.getElementById('customGrinderError').classList.add('hidden');
     renderGrinderSettings();
+    renderDisplaySettings();
     switchScreenView('settingsScreen');
   }
 
@@ -1458,12 +1667,12 @@
       row.className = "flex items-center justify-between gap-2 border-b border-borderDark/60 pb-1.5 last:border-0";
       row.innerHTML = `
         <span class="flex items-center gap-1 min-w-0">
-          <span class="text-slate-300 truncate">${coffeeData[key].name}</span>
+          <span class="text-slate-300 truncate">${escapeHTML(coffeeData[key].name)}</span>
           ${entry ? `<span class="shrink-0 text-bronze" title="${enteredHere ? 'Your setting' : 'Your setting, entered for a different method or size'}">●</span>` : ''}
         </span>
         <span class="shrink-0 flex items-center gap-1.5 font-mono font-bold">
           ${grinder.key === 'ode2' ? '' : `<span class="text-slate-500">Ode ${ode.toFixed(1)} →</span>`}
-          <input type="number" inputmode="decimal" step="any" aria-label="Your ${grinder.name} setting for ${coffeeData[key].name}"
+          <input type="number" inputmode="decimal" step="any" aria-label="Your ${escapeHTML(grinder.name)} setting for ${escapeHTML(coffeeData[key].name)}"
             value="${enteredHere ? formatGrind(entry.value, grinder) : ''}" placeholder="${converted}"
             onchange="setGrindOverride('${key}', this.value)"
             class="w-[4.5rem] bg-darkBg border ${enteredHere ? 'border-bronze text-bronze' : 'border-borderDark text-white'} rounded-lg px-2 py-1 text-base text-right placeholder:text-slate-400 focus:outline-none focus:border-bronze">
@@ -1508,17 +1717,21 @@
     bg_dose: v => isPositiveNumber(v) && v >= DOSE_LIMITS.min && v <= DOSE_LIMITS.max,
     bg_water: v => isPositiveNumber(v) && v >= WATER_LIMITS.min && v <= WATER_LIMITS.max,
     bg_ratio: isPositiveNumber,
-    bg_type: v => Object.values(coffeeData).some(c => c.category === v),
+    bg_type: v => COFFEE_TYPES.includes(v),
     bg_brew_view: v => ['ring', 'summary', 'chart'].includes(v),
     bg_voice: v => v === 'on' || v === 'off',
     bg_grinder: v => typeof v === 'string' && Object.hasOwn(GRINDERS, v),
     bg_custom_grinder: v => !!v && typeof v === 'object' && typeof (v.name ?? '') === 'string' && isValidCustomGrinder(v),
     bg_grind_calibration: v => !!v && typeof v === 'object' && Object.entries(v).every(([grinderKey, points]) =>
       Object.hasOwn(GRINDERS, grinderKey) && !!points && typeof points === 'object' &&
-      Object.entries(points).every(([coffeeKey, p]) => Object.hasOwn(coffeeData, coffeeKey) &&
-        !!p && Number.isFinite(p.ode) && Number.isFinite(p.value)))
+      Object.entries(points).every(([coffeeKey, p]) => (Object.hasOwn(coffeeData, coffeeKey) || coffeeKey.startsWith(MY_COFFEE_PREFIX)) &&
+        !!p && Number.isFinite(p.ode) && Number.isFinite(p.value))),
+    bg_custom_coffees: v => Array.isArray(v) && v.every(isValidMyCoffee),
+    bg_temp_unit: v => v === 'C' || v === 'F',
+    bg_text_size: v => v === 'standard' || v === 'large',
+    bg_motion: v => v === 'auto' || v === 'reduce'
   };
-  const JSON_BACKUP_KEYS = ['bg_custom_grinder', 'bg_grind_calibration'];
+  const JSON_BACKUP_KEYS = ['bg_custom_grinder', 'bg_grind_calibration', 'bg_custom_coffees'];
   const NUMBER_BACKUP_KEYS = ['bg_dose', 'bg_water', 'bg_ratio'];
 
   function buildSettingsBackup() {
@@ -1627,6 +1840,308 @@
     location.reload();
   }
 
+  /* ---------- Your own coffees ----------
+     Stored as bg_custom_coffees: [{ id, name, base, temp (°C), notes, ode }], where base is the built-in coffee it
+     started from and ode is its base grind on the Ode scale (V60, 250 g), like the built-in profiles. They're added to
+     coffeeData as "mine_<id>", so every recipe, grinder conversion and calibration treats them like the others. */
+  const MY_COFFEE_PREFIX = 'mine_';
+  const MY_COFFEE_LIMITS = { tempMin: 60, tempMax: 100, odeMin: -5, odeMax: 20 };
+  let editingCoffeeKey = null;
+  let coffeeEditorReturnScreen = 'setupScreen';
+
+  function escapeHTML(text) {
+    return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  }
+
+  function isValidMyCoffee(c) {
+    return !!c && typeof c === 'object' && typeof c.id === 'string' && /^[a-z0-9]{1,24}$/.test(c.id) &&
+      typeof c.name === 'string' && c.name.trim().length > 0 && c.name.length <= 50 &&
+      Number.isFinite(c.temp) && c.temp >= MY_COFFEE_LIMITS.tempMin && c.temp <= MY_COFFEE_LIMITS.tempMax &&
+      Number.isFinite(c.ode) && c.ode >= MY_COFFEE_LIMITS.odeMin && c.ode <= MY_COFFEE_LIMITS.odeMax &&
+      (c.notes === undefined || (typeof c.notes === 'string' && c.notes.length <= 300)) &&
+      (c.base === undefined || typeof c.base === 'string');
+  }
+
+  function loadMyCoffees() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('bg_custom_coffees'));
+      return Array.isArray(saved) ? saved.filter(isValidMyCoffee) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  let myCoffees = loadMyCoffees();
+
+  /* Rebuild the "mine" entries in coffeeData from myCoffees */
+  function syncMyCoffees() {
+    Object.keys(coffeeData).filter(key => key.startsWith(MY_COFFEE_PREFIX)).forEach(key => delete coffeeData[key]);
+    myCoffees.forEach(c => {
+      coffeeData[MY_COFFEE_PREFIX + c.id] = { category: 'mine', name: c.name, temp: c.temp, notes: c.notes || '', ode: c.ode, base: c.base };
+    });
+  }
+  syncMyCoffees();
+
+  function saveMyCoffees() {
+    localStorage.setItem('bg_custom_coffees', JSON.stringify(myCoffees));
+    syncMyCoffees();
+  }
+
+  const BUILT_IN_GROUPS = { standard: 'Standard roasts', pact: 'Pact', regional: 'Regional origins' };
+
+  function openCoffeeEditor(key) {
+    triggerHapticFeedback();
+    editingCoffeeKey = key;
+    const editing = key ? coffeeData[key] : null;
+    coffeeEditorReturnScreen = 'setupScreen';
+
+    const select = document.getElementById('coffeeBase');
+    select.innerHTML = Object.entries(BUILT_IN_GROUPS).map(([category, label]) =>
+      `<optgroup label="${label}">${Object.keys(coffeeData).filter(k => coffeeData[k].category === category)
+        .map(k => `<option value="${k}">${escapeHTML(coffeeData[k].name)}</option>`).join('')}</optgroup>`).join('');
+    select.value = editing && editing.base && coffeeData[editing.base] && coffeeData[editing.base].category !== 'mine' ? editing.base : 'medium_classic';
+
+    document.getElementById('coffeeEditorTitle').innerText = editing ? 'Edit Coffee' : 'Add a Coffee';
+    document.getElementById('coffeeName').value = editing ? editing.name : '';
+    document.getElementById('coffeeNotes').value = editing ? editing.notes : '';
+    document.getElementById('coffeeTempLabel').innerText = `Water temp (°${tempUnit})`;
+    document.getElementById('coffeeTemp').value = formatTempValue(editing ? editing.temp : coffeeData[select.value].temp);
+    document.getElementById('coffeeGrind').value = '';
+    document.getElementById('coffeeEditorError').classList.add('hidden');
+    document.getElementById('btnDeleteCoffee').classList.toggle('hidden', !editing);
+    updateCoffeeGrindHint();
+    switchScreenView('coffeeEditorScreen');
+  }
+
+  /* The base Ode value the editor would save if the grind field is left blank */
+  function getEditorDefaultOde() {
+    if (editingCoffeeKey && coffeeData[editingCoffeeKey]) return coffeeData[editingCoffeeKey].ode;
+    return coffeeData[document.getElementById('coffeeBase').value].ode;
+  }
+
+  function updateCoffeeGrindHint() {
+    const grinder = getGrinder();
+    const suggestion = formatGrind(convertFromOde(getEditorDefaultOde() + getOdeOffset(), grinder), grinder);
+    document.getElementById('coffeeGrind').placeholder = suggestion;
+    document.getElementById('coffeeGrindHint').innerHTML =
+      `Your <strong class="text-slate-200">${escapeHTML(grinder.name)}</strong> setting for <strong class="text-slate-200">${(RECIPES[currentMethod] || RECIPES.v60).name} at ${getWater()}g</strong>. Leave it blank to use ${escapeHTML(suggestion)}. Other methods and brew sizes are adjusted from it.`;
+  }
+
+  function onCoffeeBaseChange() {
+    // Editing an existing coffee keeps its own grind; a new one follows the chosen starting point
+    if (!editingCoffeeKey) {
+      document.getElementById('coffeeTemp').value = formatTempValue(coffeeData[document.getElementById('coffeeBase').value].temp);
+    }
+    updateCoffeeGrindHint();
+  }
+
+  function closeCoffeeEditor() {
+    triggerHapticFeedback();
+    switchScreenView(coffeeEditorReturnScreen);
+  }
+
+  function saveCoffee() {
+    const error = document.getElementById('coffeeEditorError');
+    const fail = message => {
+      error.innerText = message;
+      error.classList.remove('hidden');
+    };
+    const name = document.getElementById('coffeeName').value.trim();
+    const tempInput = parseFloat(document.getElementById('coffeeTemp').value);
+    const temp = tempUnit === 'F' ? (tempInput - 32) * 5 / 9 : tempInput;
+    const grindRaw = document.getElementById('coffeeGrind').value.trim();
+    const grindValue = parseFloat(grindRaw);
+
+    if (!name) return fail('Give your coffee a name.');
+    if (!Number.isFinite(temp) || temp < MY_COFFEE_LIMITS.tempMin || temp > MY_COFFEE_LIMITS.tempMax) {
+      return fail(`Enter a water temperature between ${formatTemp(MY_COFFEE_LIMITS.tempMin)} and ${formatTemp(MY_COFFEE_LIMITS.tempMax)}.`);
+    }
+    if (grindRaw && !Number.isFinite(grindValue)) return fail('Enter the grind as a number, or leave it blank.');
+
+    let ode = getEditorDefaultOde();
+    if (grindRaw) ode = convertToOde(grindValue) - getOdeOffset();
+    ode = Math.min(MY_COFFEE_LIMITS.odeMax, Math.max(MY_COFFEE_LIMITS.odeMin, Number(ode.toFixed(3))));
+
+    const coffee = {
+      id: editingCoffeeKey ? editingCoffeeKey.slice(MY_COFFEE_PREFIX.length) : Date.now().toString(36),
+      name,
+      base: document.getElementById('coffeeBase').value,
+      temp: Number(temp.toFixed(2)),
+      notes: document.getElementById('coffeeNotes').value.trim(),
+      ode
+    };
+    const index = myCoffees.findIndex(c => c.id === coffee.id);
+    if (index >= 0) myCoffees[index] = coffee;
+    else myCoffees.push(coffee);
+    saveMyCoffees();
+    triggerHapticFeedback();
+
+    setCoffeeType('mine');
+    switchScreenView('setupScreen');
+  }
+
+  function deleteCoffee() {
+    const coffee = coffeeData[editingCoffeeKey];
+    if (!coffee || !window.confirm(`Delete "${coffee.name}"?`)) return;
+    const id = editingCoffeeKey.slice(MY_COFFEE_PREFIX.length);
+    myCoffees = myCoffees.filter(c => c.id !== id);
+    saveMyCoffees();
+    // Drop any grind settings entered for it in Settings
+    Object.keys(grindCalibration).forEach(grinderKey => {
+      delete grindCalibration[grinderKey][editingCoffeeKey];
+      if (!Object.keys(grindCalibration[grinderKey]).length) delete grindCalibration[grinderKey];
+    });
+    saveGrindCalibration();
+    setCoffeeType('mine');
+    switchScreenView('setupScreen');
+  }
+
+  /* ---------- Display settings: temperature unit, text size, motion ---------- */
+  let tempUnit = localStorage.getItem('bg_temp_unit') === 'F' ? 'F' : 'C';
+  let textSize = localStorage.getItem('bg_text_size') === 'large' ? 'large' : 'standard';
+  let motionSetting = localStorage.getItem('bg_motion') === 'reduce' ? 'reduce' : 'auto';
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* A °C value in the chosen unit, as a number for inputs */
+  function formatTempValue(celsius) {
+    return Math.round(tempUnit === 'F' ? celsius * 9 / 5 + 32 : celsius);
+  }
+
+  function formatTemp(celsius) {
+    return `${formatTempValue(celsius)}°${tempUnit}`;
+  }
+
+  function prefersReducedMotion() {
+    return motionSetting === 'reduce' || reducedMotionQuery.matches;
+  }
+
+  function applyDisplaySettings() {
+    document.documentElement.classList.toggle('text-large', textSize === 'large');
+    document.documentElement.classList.toggle('reduce-motion', prefersReducedMotion());
+  }
+  if (reducedMotionQuery.addEventListener) reducedMotionQuery.addEventListener('change', applyDisplaySettings);
+
+  function renderDisplaySettings() {
+    const activeClass = "py-2 rounded-lg transition-all bg-bronze text-slate-950 font-extrabold shadow-depth-button active:scale-95";
+    const inactiveClass = "py-2 rounded-lg transition-all text-slate-400 hover:text-white active:scale-95";
+    applyToggle({ C: 'btnTempC', F: 'btnTempF' }, tempUnit, activeClass, inactiveClass);
+    applyToggle({ standard: 'btnTextStandard', large: 'btnTextLarge' }, textSize, activeClass, inactiveClass);
+    applyToggle({ auto: 'btnMotionAuto', reduce: 'btnMotionReduce' }, motionSetting, activeClass, inactiveClass);
+  }
+
+  function setTempUnit(unit) {
+    triggerHapticFeedback();
+    tempUnit = unit;
+    localStorage.setItem('bg_temp_unit', unit);
+    renderDisplaySettings();
+  }
+
+  function setTextSize(size) {
+    triggerHapticFeedback();
+    textSize = size;
+    localStorage.setItem('bg_text_size', size);
+    applyDisplaySettings();
+    renderDisplaySettings();
+  }
+
+  function setMotion(mode) {
+    triggerHapticFeedback();
+    motionSetting = mode;
+    localStorage.setItem('bg_motion', mode);
+    applyDisplaySettings();
+    renderDisplaySettings();
+  }
+
+  /* ---------- Resuming a brew ----------
+     iOS can close a Home Screen app while it's in the background, e.g. if you switch apps mid-brew. The brew in
+     progress is saved with the wall-clock time, so the timer keeps counting while the app is closed, and it's offered
+     again when the app reopens. */
+  const ACTIVE_BREW_KEY = 'bg_active_brew';
+  const ACTIVE_BREW_SAVE_INTERVAL = 2000;
+  let lastBrewSave = 0;
+  let resumeTicker = null;
+
+  function saveActiveBrew() {
+    if (!isBrewing()) return;
+    lastBrewSave = performance.now();
+    try {
+      localStorage.setItem(ACTIVE_BREW_KEY, JSON.stringify({
+        method: currentMethod, dose: currentDose, water: currentWater, coffee: selectedCoffeeKey,
+        elapsed: getElapsedSeconds(), paused: isPaused, savedAt: Date.now()
+      }));
+    } catch (e) {}
+  }
+
+  function clearActiveBrew() {
+    try { localStorage.removeItem(ACTIVE_BREW_KEY); } catch (e) {}
+  }
+
+  /* The saved brew with its elapsed time brought up to date, or null if there isn't one still worth resuming */
+  function loadActiveBrew() {
+    try {
+      const b = JSON.parse(localStorage.getItem(ACTIVE_BREW_KEY));
+      if (!b || !Object.hasOwn(RECIPES, b.method) || !Number.isFinite(b.elapsed) || !Number.isFinite(b.savedAt) ||
+          !Number.isFinite(b.dose) || b.dose < DOSE_LIMITS.min || b.dose > DOSE_LIMITS.max ||
+          !Number.isFinite(b.water) || b.water < WATER_LIMITS.min || b.water > WATER_LIMITS.max) return null;
+      const elapsed = b.paused ? b.elapsed : b.elapsed + Math.max(0, Date.now() - b.savedAt) / 1000;
+      const total = generateSteps(b.method, b.water).reduce((sum, s) => sum + s.time, 0);
+      if (elapsed >= total + DRAWDOWN_OVERTIME_LIMIT) return null;
+      return { ...b, elapsed: Math.max(0, elapsed), total };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderResumeScreen() {
+    const brew = loadActiveBrew();
+    if (!brew) {
+      discardSavedBrew();
+      return;
+    }
+    const coffee = coffeeData[brew.coffee];
+    document.getElementById('resumeElapsed').innerText = formatTime(brew.elapsed);
+    document.getElementById('resumeDetails').innerText =
+      `${RECIPES[brew.method].name} · ${coffee ? coffee.name : 'Coffee'} · ${brew.dose}g / ${brew.water}g`;
+    document.getElementById('resumeNote').innerText = brew.paused
+      ? 'The app was closed while your brew was paused. Resume to carry on from here.'
+      : brew.elapsed >= brew.total
+        ? 'The app was closed during the drawdown, and the timer has kept counting. Resume, then tap Done when it stops dripping.'
+        : 'The app was closed during your brew, and the timer has kept counting. Resume to pick up where you are.';
+  }
+
+  function showResumeScreen() {
+    renderResumeScreen();
+    clearInterval(resumeTicker);
+    resumeTicker = setInterval(renderResumeScreen, 1000);
+    switchScreenView('resumeScreen');
+  }
+
+  function resumeSavedBrew() {
+    clearInterval(resumeTicker);
+    const brew = loadActiveBrew();
+    if (!brew) {
+      discardSavedBrew();
+      return;
+    }
+    triggerHapticFeedback();
+    initAudio();
+    currentMethod = brew.method;
+    currentDose = brew.dose;
+    currentWater = brew.water;
+    targetRatio = brew.water / brew.dose;
+    saveBrewSize();
+    setBrewMethod(currentMethod);
+    selectedCoffeeKey = coffeeData[brew.coffee] ? brew.coffee : 'medium_classic';
+    startActiveBrewTimer(brew.elapsed, brew.paused);
+  }
+
+  function discardSavedBrew() {
+    clearInterval(resumeTicker);
+    resumeTicker = null;
+    clearActiveBrew();
+    switchScreenView('setupScreen');
+  }
+
   function goToSetupScreen() {
     triggerHapticFeedback();
     switchScreenView('setupScreen');
@@ -1637,7 +2152,7 @@
     return `
       <span class="flex items-center gap-0.5">🫘 ${currentDose}g</span>
       <span class="flex items-center gap-0.5">💧 ${getWater()}g</span>
-      <span class="flex items-center gap-0.5">🌡️ ${data.temp}</span>
+      <span class="flex items-center gap-0.5">🌡️ ${formatTemp(data.temp)}</span>
       <span class="flex items-center gap-0.5">⚙️ ${formatGrind(getGrindSetting(selectedCoffeeKey))}</span>
       <span class="flex items-center gap-0.5 font-mono text-slate-200">⏱️ ${formatTime(totalSeconds)}</span>
     `;
@@ -1864,7 +2379,8 @@
     });
 
     const currentFractionSmooth = Math.min(1, exactTime / brewTotalDuration);
-    const rotationDeg = currentFractionSmooth * 360; 
+    // With reduced motion the ring stays still and fills clockwise from 12 o'clock instead of turning
+    const rotationDeg = prefersReducedMotion() ? 0 : currentFractionSmooth * 360;
     
     const ringSvg = document.getElementById('ringSvg');
     if (ringSvg) {
@@ -1907,7 +2423,7 @@
       }
 
       const now = performance.now() * 0.007;
-      const waveAmplitude = fillRatio > 0.02 ? (isPouring ? 4.0 : 1.8) : 0;
+      const waveAmplitude = fillRatio > 0.02 && !prefersReducedMotion() ? (isPouring ? 4.0 : 1.8) : 0;
       
       const leftX = 0, rightX = 160, bottomY = 120;
       const mid1X = 50, mid2X = 110;
@@ -1984,6 +2500,7 @@
     const ctx = document.getElementById('brewChartCanvas').getContext('2d');
     if (brewChart) brewChart.destroy();
     const maxY = Math.ceil(getWater() * 1.1 / 25) * 25;
+    const big = textSize === 'large' ? 2 : 0;
 
     brewChart = new Chart(ctx, {
       type: 'line',
@@ -2018,15 +2535,15 @@
         scales: {
           x: {
             type: 'linear',
-            title: { display: true, text: 'Time (s)', color: '#94A3B8', font: { size: 10 } },
-            ticks: { color: '#64748B', font: { size: 9 } },
+            title: { display: true, text: 'Time (s)', color: '#94A3B8', font: { size: 10 + big } },
+            ticks: { color: '#64748B', font: { size: 9 + big } },
             grid: { color: '#222228' }
           },
           y: {
             min: 0,
             max: maxY,
-            title: { display: true, text: 'Weight (g)', color: '#94A3B8', font: { size: 10 } },
-            ticks: { color: '#64748B', font: { size: 9 } },
+            title: { display: true, text: 'Weight (g)', color: '#94A3B8', font: { size: 10 + big } },
+            ticks: { color: '#64748B', font: { size: 9 + big } },
             grid: { color: '#222228' }
           }
         },
@@ -2034,7 +2551,7 @@
           legend: {
             display: true,
             position: 'top',
-            labels: { color: '#CBD5E1', font: { size: 10, weight: 'bold' }, usePointStyle: true, pointStyle: 'line', boxWidth: 20 }
+            labels: { color: '#CBD5E1', font: { size: 10 + big, weight: 'bold' }, usePointStyle: true, pointStyle: 'line', boxWidth: 20 }
           },
           tooltip: { enabled: false }
         }
@@ -2094,15 +2611,18 @@
     switchScreenView('prepScreen');
   }
 
-  function startActiveBrewTimer() {
+  /* startAt and startPaused are used when resuming a brew after the app was closed */
+  function startActiveBrewTimer(startAt = 0, startPaused = false) {
     switchScreenView('brewScreen');
     generateTargetProfile();
     initChart();
     document.getElementById('liveOverviewStatsBar').innerHTML = brewStatsHTML(brewTotalDuration);
 
-    brewStartTime = performance.now();
+    const now = performance.now();
+    brewStartTime = now - startAt * 1000;
     pausedDuration = 0;
-    isPaused = false;
+    isPaused = startPaused;
+    pauseStartTime = now;
     lastChimeSecond = -1;
     lastStepIndex = -1;
     overtimeAnnounced = false;
@@ -2111,6 +2631,7 @@
     updatePrimaryControl(false);
     setBrewView(currentBrewView);
     requestWakeLock();
+    saveActiveBrew();
 
     startAnimationLoop();
   }
@@ -2147,6 +2668,7 @@
     playDistinctChime();
     speak(getStepSpeech(lastStepIndex));
     renderBrewFrame(seconds);
+    saveActiveBrew();
   }
 
   /* Silky Smooth Native Frame-Rate Animation Loop (No Jank, No Backward Stepping) */
@@ -2171,6 +2693,7 @@
         }
 
         renderBrewFrame(currentElapsed);
+        if (timestamp - lastBrewSave > ACTIVE_BREW_SAVE_INTERVAL) saveActiveBrew();
       }
       animFrameId = requestAnimationFrame(loop);
     }
@@ -2248,6 +2771,7 @@
       isPaused = false;
     }
     updatePrimaryControl(false);
+    saveActiveBrew();
   }
 
   function markDrawdownComplete() {
@@ -2297,6 +2821,7 @@
     animFrameId = null;
     releaseWakeLock();
     isPaused = false;
+    clearActiveBrew();
 
     switchScreenView('setupScreen');
     document.getElementById('totalElapsedTimer').innerText = "00:00";
@@ -2308,6 +2833,7 @@
     animFrameId = null;
     const finalElapsed = getElapsedSeconds();
     isPaused = false;
+    clearActiveBrew();
     disarmCancel();
     releaseWakeLock();
     playCompletionSound();
@@ -2318,7 +2844,7 @@
     document.getElementById('summaryFinalTime').innerText = `Total Brew Time: ${formatTime(finalElapsed)}`;
 
     const data = coffeeData[selectedCoffeeKey] || coffeeData['medium_classic'];
-    document.getElementById('tastingNotes').innerText = data.notes;
+    document.getElementById('tastingNotes').innerText = data.notes || "No tasting notes saved for this coffee. Add some by editing it under Mine.";
 
     const diag = document.getElementById('diagnosticAdvice');
     const coarserOneStep = grindAdjustmentHTML(1, true);
@@ -2373,7 +2899,9 @@
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && isBrewing()) requestWakeLock();
+    if (document.visibilityState === 'hidden') saveActiveBrew();
   });
+  window.addEventListener('pagehide', saveActiveBrew);
 
   updateVoiceButton();
   document.getElementById('grinderChipName').innerText = getGrinder().name;
@@ -2381,6 +2909,14 @@
   initBrewFieldControls();
   setBrewMethod(currentMethod);
   setCoffeeType(currentCoffeeType);
+
+  applyDisplaySettings();
+
+  if (loadActiveBrew()) {
+    showResumeScreen();
+  } else {
+    clearActiveBrew();
+  }
 
   // After an import, come back to Settings and say it worked
   try {

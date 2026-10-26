@@ -24,6 +24,7 @@
   - Every pour target is a multiple of 5 g.
   - Flow rates, stage timings and grind scale with the amount of water.
 - **Twelve coffee profiles** in three groups (Standard roasts, Pact, Regional origins), each with its own water temperature, tasting notes and grind setting adjusted for method and batch size.
+- **Your own coffees**: under **Mine**, add the coffees you buy. Pick a similar built-in profile as a starting point, then set the name, water temperature, your grind for the current method and brew size, and tasting notes. They're scaled to every method and size like the built-in profiles. Tap the pencil on a card to edit or delete one.
 - **Your grinder**: choose Fellow Ode Gen 2, Comandante C40, Baratza Encore, 1Zpresso K-Ultra, Knock Aergrind or Timemore Chestnut C3S Max, and every recipe shows the setting for that grinder. For anything else, add a **custom grinder** by entering its finest and coarsest settings and step size, and recipes are scaled across that range. Tap the gear icon or **change** under the title.
 - **Calibrate to your own settings**: in Settings, type the setting you actually use for any of the listed coffees. Every other recipe for that grinder, including other methods and brew sizes, is then scaled from your numbers. Enter one coffee to shift everything, or several to fine-tune; **Reset** clears them.
 - **Pre-brew checklist** with kettle temperature, dose and grind for the profile you picked.
@@ -34,9 +35,12 @@
 - **Spoken prompts** such as "Close the valve. Steep Pour. Pour to 250 grams.", so you don't need to watch the screen while pouring. Tap the speaker icon next to the timer to turn them off; the choice is remembered.
 - **Audio and haptic cues**: a 5-second get-ready countdown, beeps for the last 4 seconds of each stage, a chime and vibration at each stage change, and a fanfare when you finish.
 - **Drawdown timing**: during the final drawdown the Pause button becomes **Done**. Tap it when the coffee stops dripping, and the completion screen compares your drawdown with the recipe and tells you whether to grind coarser, finer, or keep the same setting. If the timer runs out first, it keeps counting until you tap Done.
+- **Resume after interruptions**: if the app is closed mid-brew (iOS may close Home Screen apps in the background), reopening it offers to resume. The timer keeps counting while the app is closed, and a paused brew stays paused.
 - **Pause, Back and Skip** controls, a Cancel button on the countdown, and a tap-twice Cancel Brew so a stray tap can't end your brew. The screen stays awake while brewing.
-- **Works offline** once loaded, and remembers your last method, dose, ratio, grinder, coffee type and view.
-- **Backup and restore**: settings are stored only on your device, in the browser's local storage. In Settings → **Backup**, export them to a file (on a phone this opens the share sheet, so you can save to Files or AirDrop it) or copy them as text, then import the file or paste the text to restore them on another phone or after reinstalling. On iPhone, the Home Screen app keeps its own settings, separate from Safari, so this is also how you move settings between the two.
+- **Works fully offline** from the first visit (Chart.js and the Inter font are served with the app), and remembers your last method, dose, ratio, grinder, coffee type and view.
+- **Update prompt**: when a new version is published, the app offers a **Reload** (never in the middle of a brew).
+- **Display options** in Settings: temperatures in **°C or °F**, **Large** text for reading at arm's length, and **Reduced** motion (a still brew ring and no pulsing or ripples). Motion follows your phone's Reduce Motion setting on **Auto**.
+- **Backup and restore**: settings are stored only on your device, in the browser's local storage. In Settings → **Backup**, export them (your own coffees and display options included) to a file (on a phone this opens the share sheet, so you can save to Files or AirDrop it) or copy them as text, then import the file or paste the text to restore them on another phone or after reinstalling. On iPhone, the Home Screen app keeps its own settings, separate from Safari, so this is also how you move settings between the two.
 
 ## Install on your phone
 
@@ -75,11 +79,13 @@ tailwind.config.js     Tailwind theme (app colours and shadows)
 package.json           Build scripts for styles.css
 manifest.webmanifest   Web app manifest (name, colours, icons) for "Add to Home Screen"
 sw.js                  Service worker that caches the app for offline use
+vendor/                Chart.js and the Inter font (latin subset), with their licences, copied by npm run vendor
+scripts/vendor.js      Copies those files from node_modules into vendor/
 icons/                 App icon (bean, dripper and cup logo): SVG source plus PNG sizes for each platform
 .nojekyll              Tells GitHub Pages to skip Jekyll processing
 ```
 
-[Chart.js](https://www.chartjs.org/) and the [Inter](https://rsms.me/inter/) font load from CDNs. The service worker caches them after the first visit.
+[Chart.js](https://www.chartjs.org/) (MIT) and the [Inter](https://rsms.me/inter/) font (SIL Open Font License) are served from `vendor/`, so nothing loads from a CDN.
 
 ## Rebuilding the CSS
 
@@ -92,11 +98,22 @@ npm run build:css     # or: npm run watch:css while editing
 
 Commit the updated `styles.css` together with your `index.html` changes.
 
+## Updating Chart.js or Inter
+
+Change the `chart.js` or `@fontsource-variable/inter` version in `package.json`, then:
+
+```sh
+npm install
+npm run vendor
+```
+
+Commit the updated files in `vendor/`.
+
 ## Customising
 
 Everything lives near the top of the `<script>` in `index.html`:
 
-- **Coffee profiles** (`coffeeData`): each entry has a `category` (`standard`, `pact` or `regional`), display `name`, water `temp`, tasting `notes` and base grind `ode`, on the Fellow Ode Gen 2 dial for a 250 g V60.
+- **Coffee profiles** (`coffeeData`): each entry has a `category` (`standard`, `pact` or `regional`), display `name`, water `temp` in °C, tasting `notes` and base grind `ode`, on the Fellow Ode Gen 2 dial for a 250 g V60. Coffees added in the app are stored the same way and appear under `mine`.
 - **Recipes** (`RECIPES`): one entry per brew method, with its `grindOffset` (V60 0, Switch hybrid +0.2, full immersion and Clever +0.5) and its steps. Each step gives:
   - `water`: the cumulative target as a fraction of the total (0.2 = 20%);
   - `time`: `[seconds at 250 g, seconds at 500 g]`. Other sizes are interpolated, and extrapolated a little beyond that range;
@@ -110,7 +127,7 @@ Settings you enter yourself are stored as calibration points for that grinder. C
 
 The preset conversions are approximate starting points. Use the drawdown advice after each brew to dial in.
 
-After changing any file, bump `CACHE_VERSION` in `sw.js` (for example `brew-guide-v3`) so installed copies pick up the update.
+After changing any file, bump `CACHE_VERSION` in `sw.js` (for example `brew-guide-v8`) so installed copies pick up the update. Open copies then show the update prompt.
 
 ## Running locally
 
