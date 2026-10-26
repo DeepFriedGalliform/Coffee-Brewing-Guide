@@ -1,7 +1,7 @@
 // Offline support: precache the app shell, then serve everything (including the
 // Chart.js and font CDNs) cache-first while refreshing in the background.
 // Bump CACHE_VERSION when you change any of the files below.
-const CACHE_VERSION = 'brew-guide-v5';
+const CACHE_VERSION = 'brew-guide-v6';
 
 const APP_SHELL = [
   './',

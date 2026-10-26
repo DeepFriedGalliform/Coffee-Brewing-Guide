@@ -258,6 +258,19 @@
         <div id="grinderPreview" class="flex flex-col gap-1.5 text-[11px]"></div>
         <p id="calibrationNote" class="text-[10px] text-slate-400 leading-relaxed mt-1"></p>
       </div>
+
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">BACKUP</span>
+        <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+          <button type="button" onclick="exportSettings()" class="py-2.5 px-2 rounded-lg transition-all bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white leading-tight active:scale-95">Export file</button>
+          <button type="button" onclick="chooseImportFile()" class="py-2.5 px-2 rounded-lg transition-all bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white leading-tight active:scale-95">Import file</button>
+          <button type="button" onclick="copySettings()" class="py-2.5 px-2 rounded-lg transition-all bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white leading-tight active:scale-95">Copy as text</button>
+          <button type="button" onclick="pasteSettings()" class="py-2.5 px-2 rounded-lg transition-all bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white leading-tight active:scale-95">Paste text</button>
+        </div>
+        <input id="importFile" type="file" accept=".json,application/json,text/plain" class="hidden" onchange="importSettingsFile(this)">
+        <p id="backupStatus" role="status" class="hidden text-[11px] font-bold"></p>
+        <p class="text-[10px] text-slate-400 leading-relaxed">Your settings are stored only on this device. Export saves your method, brew size, coffee type, voice, grinder, custom grinder and grind settings, so you can restore them on a new phone or after reinstalling. Importing replaces your current settings.</p>
+      </div>
     </div>
 
     <button onclick="closeSettings()" class="w-full mt-3 bg-volvic hover:bg-volvicDark text-white font-extrabold py-3 rounded-2xl text-sm shadow-depth-button active:scale-[0.98] transition-all">
@@ -1485,6 +1498,135 @@
     renderGrinderPreview();
   }
 
+  /* ---------- Settings backup ----------
+     Everything the app remembers lives in this device's localStorage. Export writes it to a small JSON file (or the
+     clipboard), and import restores it, replacing the current settings. Each value is checked before it's restored. */
+  const BACKUP_FORMAT = 'coffee-brewing-guide-settings';
+  const isPositiveNumber = v => typeof v === 'number' && Number.isFinite(v) && v > 0;
+  const BACKUP_KEYS = {
+    bg_method: v => typeof v === 'string' && Object.hasOwn(RECIPES, v),
+    bg_dose: v => isPositiveNumber(v) && v >= DOSE_LIMITS.min && v <= DOSE_LIMITS.max,
+    bg_water: v => isPositiveNumber(v) && v >= WATER_LIMITS.min && v <= WATER_LIMITS.max,
+    bg_ratio: isPositiveNumber,
+    bg_type: v => Object.values(coffeeData).some(c => c.category === v),
+    bg_brew_view: v => ['ring', 'summary', 'chart'].includes(v),
+    bg_voice: v => v === 'on' || v === 'off',
+    bg_grinder: v => typeof v === 'string' && Object.hasOwn(GRINDERS, v),
+    bg_custom_grinder: v => !!v && typeof v === 'object' && typeof (v.name ?? '') === 'string' && isValidCustomGrinder(v),
+    bg_grind_calibration: v => !!v && typeof v === 'object' && Object.entries(v).every(([grinderKey, points]) =>
+      Object.hasOwn(GRINDERS, grinderKey) && !!points && typeof points === 'object' &&
+      Object.entries(points).every(([coffeeKey, p]) => Object.hasOwn(coffeeData, coffeeKey) &&
+        !!p && Number.isFinite(p.ode) && Number.isFinite(p.value)))
+  };
+  const JSON_BACKUP_KEYS = ['bg_custom_grinder', 'bg_grind_calibration'];
+  const NUMBER_BACKUP_KEYS = ['bg_dose', 'bg_water', 'bg_ratio'];
+
+  function buildSettingsBackup() {
+    const settings = {};
+    Object.keys(BACKUP_KEYS).forEach(key => {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return;
+      try {
+        if (JSON_BACKUP_KEYS.includes(key)) settings[key] = JSON.parse(raw);
+        else if (NUMBER_BACKUP_KEYS.includes(key)) settings[key] = parseFloat(raw);
+        else settings[key] = raw;
+      } catch (e) {}
+    });
+    return { format: BACKUP_FORMAT, version: 1, exported: new Date().toISOString(), settings };
+  }
+
+  function showBackupStatus(message, isError) {
+    const status = document.getElementById('backupStatus');
+    status.innerText = message;
+    status.className = `text-[11px] font-bold ${isError ? 'text-rose-400' : 'text-emerald-400'}`;
+  }
+
+  async function exportSettings() {
+    triggerHapticFeedback();
+    const json = JSON.stringify(buildSettingsBackup(), null, 2);
+    const fileName = `brew-guide-settings-${new Date().toISOString().slice(0, 10)}.json`;
+    const file = new File([json], fileName, { type: 'application/json' });
+    // On phones the share sheet is the reliable way to save a file (Save to Files, AirDrop, Mail...)
+    if (window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Brew Guide settings' });
+        showBackupStatus('Settings exported.');
+      } catch (e) {
+        if (e.name !== 'AbortError') showBackupStatus("Couldn't share the file. Try Copy as text instead.", true);
+      }
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(file);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    showBackupStatus(`Saved ${fileName}.`);
+  }
+
+  async function copySettings() {
+    triggerHapticFeedback();
+    const json = JSON.stringify(buildSettingsBackup());
+    try {
+      await navigator.clipboard.writeText(json);
+      showBackupStatus('Settings copied. Paste them into a note or message to keep them.');
+    } catch (e) {
+      window.prompt('Copy your settings:', json);
+    }
+  }
+
+  function chooseImportFile() {
+    triggerHapticFeedback();
+    const input = document.getElementById('importFile');
+    input.value = '';
+    input.click();
+  }
+
+  function importSettingsFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    file.text()
+      .then(importSettingsText)
+      .catch(() => showBackupStatus("Couldn't read that file.", true));
+  }
+
+  async function pasteSettings() {
+    triggerHapticFeedback();
+    let text = null;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch (e) {}
+    if (!text || !text.trim()) text = window.prompt('Paste your settings:');
+    if (text && text.trim()) importSettingsText(text);
+  }
+
+  function importSettingsText(text) {
+    let backup;
+    try { backup = JSON.parse(text); } catch (e) { backup = null; }
+    if (!backup || backup.format !== BACKUP_FORMAT || !backup.settings || typeof backup.settings !== 'object') {
+      showBackupStatus("That isn't a Brew Guide settings backup.", true);
+      return;
+    }
+    const valid = Object.entries(backup.settings).filter(([key, value]) => Object.hasOwn(BACKUP_KEYS, key) && BACKUP_KEYS[key](value));
+    if (!valid.length) {
+      showBackupStatus("That backup doesn't contain any settings this app can use.", true);
+      return;
+    }
+    if (!window.confirm('Replace your current settings with this backup?')) return;
+
+    Object.keys(BACKUP_KEYS).forEach(key => localStorage.removeItem(key));
+    localStorage.removeItem('bg_cups');
+    valid.forEach(([key, value]) => localStorage.setItem(key, JSON_BACKUP_KEYS.includes(key) ? JSON.stringify(value) : String(value)));
+    const skipped = Object.keys(backup.settings).length - valid.length;
+    try {
+      sessionStorage.setItem('bg_import_notice', skipped ? `Settings imported. ${skipped} ${skipped === 1 ? 'entry' : 'entries'} couldn't be used and ${skipped === 1 ? 'was' : 'were'} skipped.` : 'Settings imported.');
+    } catch (e) {}
+    // Reload so every part of the app starts from the restored settings
+    location.reload();
+  }
+
   function goToSetupScreen() {
     triggerHapticFeedback();
     switchScreenView('setupScreen');
@@ -2239,6 +2381,16 @@
   initBrewFieldControls();
   setBrewMethod(currentMethod);
   setCoffeeType(currentCoffeeType);
+
+  // After an import, come back to Settings and say it worked
+  try {
+    const importNotice = sessionStorage.getItem('bg_import_notice');
+    if (importNotice) {
+      sessionStorage.removeItem('bg_import_notice');
+      openSettings();
+      showBackupStatus(importNotice);
+    }
+  } catch (e) {}
 </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/icon-192.png" width="96" height="96" alt="Coffee bean icon">
+  <img src="icons/icon-192.png" width="96" height="96" alt="Brew Guide logo">
 </p>
 
 <h1 align="center">Coffee Brewing Guide</h1>
@@ -36,6 +36,7 @@
 - **Drawdown timing**: during the final drawdown the Pause button becomes **Done**. Tap it when the coffee stops dripping, and the completion screen compares your drawdown with the recipe and tells you whether to grind coarser, finer, or keep the same setting. If the timer runs out first, it keeps counting until you tap Done.
 - **Pause, Back and Skip** controls, a Cancel button on the countdown, and a tap-twice Cancel Brew so a stray tap can't end your brew. The screen stays awake while brewing.
 - **Works offline** once loaded, and remembers your last method, dose, ratio, grinder, coffee type and view.
+- **Backup and restore**: settings are stored only on your device, in the browser's local storage. In Settings → **Backup**, export them to a file (on a phone this opens the share sheet, so you can save to Files or AirDrop it) or copy them as text, then import the file or paste the text to restore them on another phone or after reinstalling. On iPhone, the Home Screen app keeps its own settings, separate from Safari, so this is also how you move settings between the two.
 
 ## Install on your phone
 
@@ -43,7 +44,7 @@
 2. Add it to your home screen:
    - **iPhone / iPad (Safari):** tap **Share** → **Add to Home Screen**.
    - **Android (Chrome):** tap **⋮** → **Install app** (or **Add to Home screen**).
-3. Launch it from the coffee-bean icon. It opens full-screen without browser bars.
+3. Launch it from the Brew Guide icon. It opens full-screen without browser bars.
 
 ## How to use
 
@@ -74,7 +75,7 @@ tailwind.config.js     Tailwind theme (app colours and shadows)
 package.json           Build scripts for styles.css
 manifest.webmanifest   Web app manifest (name, colours, icons) for "Add to Home Screen"
 sw.js                  Service worker that caches the app for offline use
-icons/                 Coffee-bean app icon: SVG source plus PNG sizes for each platform
+icons/                 App icon (bean, dripper and cup logo): SVG source plus PNG sizes for each platform
 .nojekyll              Tells GitHub Pages to skip Jekyll processing
 ```
 
