@@ -36,6 +36,7 @@
 
 ### Coffees and grind
 - **Twelve coffee profiles** in three groups (Standard roasts, Pact, Regional origins), each with its own water temperature, tasting notes and grind adjusted for method and brew size.
+- **Scan a coffee bag**: in **Add a Coffee**, tap **📷 Scan bag** and take or pick a photo of the bag. Claude reads the label and fills in the name, roaster, origin, process, roast, tasting notes, water temperature and the closest built-in profile, ready for you to check and edit before saving. It needs your own Anthropic API key (see [Photo scanning](#photo-scanning)). No key, or offline? **📋 Paste label text** fills the form from copied text instead, entirely on your phone (on iPhone, press and hold the text in a photo to copy it with Live Text).
 - **Your own coffees**: under **Mine**, tap **+ Add a coffee**. Pick a similar built-in profile as a starting point, then set the name, water temperature, your grind for the current method and brew size, and tasting notes. They're scaled to every method and size like the built-in profiles. Tap the pencil on a card to edit or delete one.
 - **Your grinder**: choose Fellow Ode Gen 2, Comandante C40, Baratza Encore, 1Zpresso K-Ultra, Knock Aergrind or Timemore Chestnut C3S Max, and every recipe shows the setting for that grinder. For anything else, add a **custom grinder** by entering its finest and coarsest settings and step size, and recipes are scaled across that range.
 - **Calibrate to your own settings**: in Settings, type the setting you actually use for any of the listed coffees. Every other recipe for that grinder, including other methods and brew sizes, is then scaled from your numbers. Enter one coffee to shift everything, or several to fine-tune; **Reset** clears them.
@@ -54,10 +55,28 @@
 
 ## Your data
 
-Everything the app remembers is stored only on your device, in the browser's local storage. There's no account or server, and nothing is uploaded.
+Everything the app remembers is stored only on your device, in the browser's local storage. There's no account or server, and nothing is uploaded unless you use Scan bag.
 
+- The only thing that ever leaves your phone is a photo you choose to scan, sent to Anthropic with your API key. The key itself is never exported.
 - On iPhone, the Home Screen app keeps its own storage, separate from Safari. Use **Export** / **Import** to move settings between the two, or to a new phone.
 - Deleting the app from your Home Screen deletes its settings, so export a backup first.
+
+## Photo scanning
+
+**Scan bag** sends the photo to Claude through the [Anthropic API](https://console.anthropic.com), using your own API key:
+
+1. Create an API key at [console.anthropic.com](https://console.anthropic.com) (API usage is billed to that account).
+2. In the app, open **Settings → Photo scanning**, paste the key and tap **Save**.
+3. Optionally pick the model: Claude Opus 5.5 (the default, most accurate), Claude Sonnet 5.5, or Claude Haiku 5.5 (lowest cost).
+
+How the key is handled:
+
+- It's stored only in your phone's local storage for this app, and sent only to Anthropic with each scan.
+- It isn't in this repository or the published site, and **Export** backups never include it (importing a backup keeps the key you already have).
+- **Remove key from this device** in Settings deletes it.
+- Photos are resized on your phone and sent to Anthropic only when you tap **Scan bag**.
+
+The app calls the API straight from the browser with the official [Anthropic TypeScript SDK](https://github.com/anthropics/anthropic-sdk-typescript), bundled into `vendor/anthropic-sdk.js` and loaded only when you scan. Because the key sits on the device, use a key you control, and set a spend limit on it in the Console if you like.
 
 ## Install on your phone
 
@@ -101,13 +120,14 @@ tailwind.config.js     Tailwind theme (app colours and shadows)
 package.json           Build scripts for styles.css
 manifest.webmanifest   Web app manifest (name, colours, icons) for "Add to Home Screen"
 sw.js                  Service worker that caches the app for offline use
-vendor/                Chart.js and the Inter font (latin subset), with their licences, copied by npm run vendor
-scripts/vendor.js      Copies those files from node_modules into vendor/
+vendor/                Chart.js, the Inter font (latin subset) and a browser bundle of the Anthropic SDK, with their licences
+scripts/vendor.js      Copies or builds those files from node_modules into vendor/ (npm run vendor)
+scripts/anthropic-entry.js  The parts of the Anthropic SDK that go into vendor/anthropic-sdk.js
 icons/                 App icon (bean, dripper and cup logo): SVG source plus PNG sizes for each platform
 .nojekyll              Tells GitHub Pages to skip Jekyll processing
 ```
 
-[Chart.js](https://www.chartjs.org/) (MIT) and the [Inter](https://rsms.me/inter/) font (SIL Open Font License) are served from `vendor/`, so nothing loads from a CDN.
+[Chart.js](https://www.chartjs.org/) (MIT), the [Inter](https://rsms.me/inter/) font (SIL Open Font License) and the [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-typescript) (MIT) are served from `vendor/`, so nothing loads from a CDN.
 
 ## Rebuilding the CSS
 
@@ -120,9 +140,9 @@ npm run build:css     # or: npm run watch:css while editing
 
 Commit the updated `styles.css` together with your `index.html` changes.
 
-## Updating Chart.js or Inter
+## Updating Chart.js, Inter or the Anthropic SDK
 
-Change the `chart.js` or `@fontsource-variable/inter` version in `package.json`, then:
+Change the `chart.js`, `@fontsource-variable/inter` or `@anthropic-ai/sdk` version in `package.json`, then:
 
 ```sh
 npm install

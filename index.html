@@ -305,6 +305,25 @@
       </div>
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 block">PHOTO SCANNING</span>
+        <p id="apiKeyStatus" class="text-[11px] font-bold text-slate-300"></p>
+        <div class="flex gap-1.5">
+          <input id="apiKeyInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…" aria-label="Anthropic API key" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze font-mono min-w-0 flex-1">
+          <button type="button" onclick="saveApiKey()" class="shrink-0 px-3.5 rounded-lg bg-bronze text-slate-950 font-extrabold text-[11px] shadow-depth-button active:scale-95 transition-all">Save</button>
+        </div>
+        <button id="btnRemoveApiKey" type="button" onclick="removeApiKey()" class="hidden self-start text-[11px] font-bold text-rose-300 hover:text-rose-200 underline underline-offset-2">Remove key from this device</button>
+        <label class="text-[10px] font-bold text-slate-300">Model
+          <select id="scanModel" onchange="setScanModel(this.value)" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze">
+            <option value="claude-opus-5-5">Claude Opus 5.5 (most accurate)</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+            <option value="claude-haiku-5-5">Claude Haiku 5.5 (lowest cost)</option>
+          </select>
+        </label>
+        <p class="text-[10px] text-slate-400 leading-relaxed"><strong class="text-slate-300">Scan bag</strong> (in Add a Coffee) reads a photo of a coffee bag with Claude and fills in the details for you to check. It uses your own API key from console.anthropic.com, and each scan is billed to your Anthropic account.</p>
+        <p class="text-[10px] text-slate-400 leading-relaxed">Your key is stored only on this device. It's never included in backups, and it's only ever sent to Anthropic. Photos are sent to Anthropic only when you scan.</p>
+      </div>
+
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 block">DISPLAY</span>
         <div class="flex items-center justify-between gap-3">
           <span class="text-[11px] font-bold text-slate-300">Temperature</span>
@@ -354,6 +373,20 @@
     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-0.5">
       <div class="text-center pt-1">
         <h2 id="coffeeEditorTitle" class="text-xl font-extrabold text-white drop-shadow">Add a Coffee</h2>
+      </div>
+
+      <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2">
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnScanBag" type="button" onclick="chooseScanPhoto()" class="py-2.5 rounded-lg bg-bronze text-slate-950 font-extrabold text-[11px] shadow-depth-button active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none">📷 Scan bag</button>
+          <button type="button" onclick="togglePastePanel()" class="py-2.5 rounded-lg bg-darkBg/90 border border-borderDark/80 text-slate-300 hover:text-white font-bold text-[11px] active:scale-95 transition-all">📋 Paste label text</button>
+        </div>
+        <input id="scanPhotoInput" type="file" accept="image/*" class="hidden" onchange="scanPhoto(this)">
+        <div id="pastePanel" class="hidden flex-col gap-1.5">
+          <textarea id="pasteText" rows="4" placeholder="Paste the text from the bag here" class="w-full bg-darkBg border border-borderDark rounded-lg px-2.5 py-2 text-base text-white focus:outline-none focus:border-bronze resize-none"></textarea>
+          <p class="text-[10px] text-slate-400 leading-relaxed">Tip: open a photo of the bag in Photos, press and hold the label text, tap Select All, then Copy.</p>
+          <button type="button" onclick="fillFromPastedText()" class="py-2 rounded-lg bg-darkBg border border-bronze/60 text-bronze font-bold text-[11px] active:scale-95 transition-all">Fill in from text</button>
+        </div>
+        <p id="scanStatus" role="status" class="hidden text-[11px] font-bold leading-snug"></p>
       </div>
 
       <div class="bg-darkBg/70 border border-borderDark/80 rounded-2xl p-3.5 shadow-depth-inner flex flex-col gap-2.5">
@@ -1592,6 +1625,7 @@
     document.getElementById('customStep').value = c.step;
     document.getElementById('customGrinderError').classList.add('hidden');
     renderGrinderSettings();
+    renderScanSettings();
     renderDisplaySettings();
     switchScreenView('settingsScreen');
   }
@@ -1729,7 +1763,9 @@
     bg_custom_coffees: v => Array.isArray(v) && v.every(isValidMyCoffee),
     bg_temp_unit: v => v === 'C' || v === 'F',
     bg_text_size: v => v === 'standard' || v === 'large',
-    bg_motion: v => v === 'auto' || v === 'reduce'
+    bg_motion: v => v === 'auto' || v === 'reduce',
+    bg_scan_model: v => SCAN_MODELS.includes(v)
+    // bg_api_key is deliberately not here: the API key never leaves this device in a backup
   };
   const JSON_BACKUP_KEYS = ['bg_custom_grinder', 'bg_grind_calibration', 'bg_custom_coffees'];
   const NUMBER_BACKUP_KEYS = ['bg_dose', 'bg_water', 'bg_ratio'];
@@ -1909,6 +1945,10 @@
     document.getElementById('coffeeGrind').value = '';
     document.getElementById('coffeeEditorError').classList.add('hidden');
     document.getElementById('btnDeleteCoffee').classList.toggle('hidden', !editing);
+    document.getElementById('pastePanel').classList.add('hidden');
+    document.getElementById('pastePanel').classList.remove('flex');
+    document.getElementById('pasteText').value = '';
+    showScanStatus('');
     updateCoffeeGrindHint();
     switchScreenView('coffeeEditorScreen');
   }
@@ -1994,6 +2034,292 @@
     saveGrindCalibration();
     setCoffeeType('mine');
     switchScreenView('setupScreen');
+  }
+
+  /* ---------- Scanning a coffee bag ----------
+     Scan bag sends a photo to Claude with the user's own API key and fills in Add a Coffee from the reply, for the
+     user to check before saving. The key lives only in this device's localStorage (bg_api_key): it isn't part of the
+     app's code, and backups leave it out. Paste label text fills the form from copied text instead, on the device. */
+  const API_KEY_STORAGE = 'bg_api_key';
+  const SCAN_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'];
+  // Models that support server-side fallback when a request is declined (Claude Haiku 5.5 doesn't)
+  const SCAN_MODELS_WITH_FALLBACK = ['claude-opus-5-5', 'claude-sonnet-5-5'];
+  const SCAN_IMAGE_MAX_EDGE = 1568;
+  const ROAST_LEVELS = ['light', 'medium-light', 'medium', 'medium-dark', 'dark', 'unknown'];
+  const COFFEE_ORIGINS = ['Ethiopia', 'Kenya', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda', 'Yemen', 'Colombia', 'Brazil',
+    'Peru', 'Bolivia', 'Ecuador', 'Guatemala', 'Costa Rica', 'Honduras', 'El Salvador', 'Nicaragua', 'Panama', 'Mexico',
+    'Sumatra', 'Indonesia', 'Papua New Guinea', 'India', 'Vietnam', 'China', 'Myanmar', 'Thailand', 'Jamaica', 'Hawaii'];
+  let scanModel = SCAN_MODELS.includes(localStorage.getItem('bg_scan_model')) ? localStorage.getItem('bg_scan_model') : 'claude-opus-5-5';
+  let anthropicSdk = null;
+
+  function getApiKey() {
+    try { return localStorage.getItem(API_KEY_STORAGE) || ''; } catch (e) { return ''; }
+  }
+
+  function renderScanSettings() {
+    const key = getApiKey();
+    document.getElementById('apiKeyStatus').innerText = key
+      ? `API key saved on this device (ending ${key.slice(-4)}).`
+      : 'No API key saved, so Scan bag is off. Paste label text works without one.';
+    document.getElementById('btnRemoveApiKey').classList.toggle('hidden', !key);
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('scanModel').value = scanModel;
+  }
+
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) return;
+    triggerHapticFeedback();
+    localStorage.setItem(API_KEY_STORAGE, key);
+    renderScanSettings();
+  }
+
+  function removeApiKey() {
+    triggerHapticFeedback();
+    localStorage.removeItem(API_KEY_STORAGE);
+    renderScanSettings();
+  }
+
+  function setScanModel(model) {
+    if (!SCAN_MODELS.includes(model)) return;
+    scanModel = model;
+    localStorage.setItem('bg_scan_model', model);
+  }
+
+  /* kind: 'info', 'ok' or 'error'; an empty message hides the line */
+  function showScanStatus(message, kind = 'info') {
+    const status = document.getElementById('scanStatus');
+    const color = kind === 'error' ? 'text-rose-400' : kind === 'ok' ? 'text-emerald-400' : 'text-slate-300';
+    status.className = `${message ? '' : 'hidden '}text-[11px] font-bold leading-snug ${color}`;
+    status.innerText = message;
+  }
+
+  function chooseScanPhoto() {
+    triggerHapticFeedback();
+    if (!getApiKey()) {
+      showScanStatus('To scan bags, add your Anthropic API key in Settings → Photo scanning. Or use Paste label text.', 'error');
+      return;
+    }
+    if (!navigator.onLine) {
+      showScanStatus("You're offline. Scanning needs a connection, but Paste label text works offline.", 'error');
+      return;
+    }
+    const input = document.getElementById('scanPhotoInput');
+    input.value = '';
+    input.click();
+  }
+
+  /* The photo as base64 JPEG, scaled down so its long edge is at most SCAN_IMAGE_MAX_EDGE (plenty for a label) */
+  async function photoToBase64Jpeg(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const scale = Math.min(1, SCAN_IMAGE_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function getBuiltInCoffeeKeys() {
+    return Object.keys(coffeeData).filter(key => coffeeData[key].category !== 'mine');
+  }
+
+  function getScanSchema() {
+    return {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        is_coffee_label: { type: 'boolean' },
+        coffee_name: { type: 'string' },
+        roaster: { type: 'string' },
+        origin: { type: 'string' },
+        process: { type: 'string' },
+        roast_level: { type: 'string', enum: ROAST_LEVELS },
+        tasting_notes: { type: 'string' },
+        water_temp_c: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
+        similar_profile: { type: 'string', enum: getBuiltInCoffeeKeys() }
+      },
+      required: ['is_coffee_label', 'coffee_name', 'roaster', 'origin', 'process', 'roast_level', 'tasting_notes', 'water_temp_c', 'similar_profile']
+    };
+  }
+
+  function getScanPrompt() {
+    const profiles = getBuiltInCoffeeKeys()
+      .map(key => `- ${key}: ${coffeeData[key].name}, ${coffeeData[key].temp}°C. ${coffeeData[key].notes}`).join('\n');
+    return `You read photos of coffee bags and labels for a pour-over brewing app. Report what the label shows. Don't invent details: use an empty string for anything the label doesn't show.
+
+- is_coffee_label: false if the photo isn't a coffee bag or label.
+- coffee_name: the coffee's own name as printed (for example "Guji Hambela" or "House Blend"), without the roaster.
+- roaster: the roaster or brand.
+- origin: country, plus region or farm if shown.
+- process: for example Washed, Natural, Honey or Anaerobic.
+- roast_level: as printed. If it isn't printed, judge from the wording ("filter roast" is usually light, "espresso roast" medium-dark), or use "unknown".
+- tasting_notes: the flavour notes as printed, separated by commas.
+- water_temp_c: the brewing temperature in °C if the label gives one, otherwise null.
+- similar_profile: whichever of these brewing profiles is closest to this coffee:
+${profiles}`;
+  }
+
+  async function scanPhoto(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const button = document.getElementById('btnScanBag');
+    button.disabled = true;
+    showScanStatus('Reading the label…');
+    try {
+      const data = await photoToBase64Jpeg(file);
+      if (!anthropicSdk) anthropicSdk = await import('./vendor/anthropic-sdk.js');
+      const { Anthropic, jsonSchemaOutputFormat } = anthropicSdk;
+      // The key is the user's own, typed in on this device, so calling the API from the browser is intended here
+      const client = new Anthropic({ apiKey: getApiKey(), dangerouslyAllowBrowser: true });
+      const params = {
+        model: scanModel,
+        max_tokens: 16000,
+        // transform: false sends the schema as written (the API supports its enums), rather than as descriptions
+        output_config: { effort: 'low', format: jsonSchemaOutputFormat(getScanSchema(), { transform: false }) },
+        system: getScanPrompt(),
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } },
+            { type: 'text', text: 'Read this coffee bag.' }
+          ]
+        }]
+      };
+      if (SCAN_MODELS_WITH_FALLBACK.includes(scanModel)) {
+        // If the request is declined, let the API retry it on its recommended fallback model
+        params.betas = ['server-side-fallback-2026-07-01'];
+        params.fallbacks = 'default';
+      }
+      const response = await client.beta.messages.parse(params);
+
+      if (response.stop_reason === 'refusal') {
+        showScanStatus("Claude couldn't read this photo. Try another one, or use Paste label text.", 'error');
+        return;
+      }
+      const result = response.parsed_output;
+      if (response.stop_reason === 'max_tokens' || !result) {
+        showScanStatus("The reply couldn't be read. Please try again.", 'error');
+        return;
+      }
+      if (!result.is_coffee_label) {
+        showScanStatus("That doesn't look like a coffee bag. Try a clear photo of the label.", 'error');
+        return;
+      }
+      applyLabelDetails({
+        name: result.coffee_name, roaster: result.roaster, origin: result.origin, process: result.process,
+        roast: ROAST_LEVELS.includes(result.roast_level) && result.roast_level !== 'unknown' ? result.roast_level : '',
+        notes: result.tasting_notes,
+        tempC: result.water_temp_c, similar: result.similar_profile
+      }, 'photo');
+    } catch (e) {
+      showScanStatus(describeScanError(e), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function describeScanError(e) {
+    if (!anthropicSdk) return "Couldn't load the scanner. Check your connection and try again.";
+    const { Anthropic } = anthropicSdk;
+    if (e instanceof Anthropic.AuthenticationError) return 'Anthropic rejected your API key. Check it in Settings → Photo scanning.';
+    if (e instanceof Anthropic.PermissionDeniedError) return "Your API key can't use this model. Pick another model in Settings → Photo scanning.";
+    if (e instanceof Anthropic.NotFoundError) return "This model isn't available to your account. Pick another model in Settings → Photo scanning.";
+    if (e instanceof Anthropic.RateLimitError) return 'Too many scans at once. Wait a moment and try again.';
+    if (e instanceof Anthropic.BadRequestError) return `Anthropic couldn't process this scan: ${String(e.message).slice(0, 160)}`;
+    if (e instanceof Anthropic.APIConnectionError) return "Couldn't reach Anthropic. Check your connection and try again.";
+    if (e instanceof Anthropic.APIError) return `Anthropic returned an error${e.status ? ` (${e.status})` : ''}. Please try again.`;
+    return "Couldn't read that photo. Try another one, or use Paste label text.";
+  }
+
+  /* The closest built-in profile, from origin, process and roast */
+  function guessSimilarProfile(d) {
+    const text = `${d.name || ''} ${d.origin || ''} ${d.process || ''}`.toLowerCase();
+    const roast = (d.roast || '').toLowerCase();
+    if (/natural|anaerobic|carbonic/.test(text)) return 'natural_process';
+    if (/sumatra|indonesia|java|sulawesi|papua|new guinea/.test(text)) return 'sumatran_dark';
+    if (roast === 'dark' || roast === 'medium-dark') return 'dark_low';
+    if (/ethiopia|kenya|yirgacheffe|sidamo|guji/.test(text)) return 'african_washed';
+    if (/guatemala|costa rica|honduras|el salvador|nicaragua|panama|mexico/.test(text)) return 'central_american';
+    if (roast === 'light') return 'light_high';
+    if (roast === 'medium-light') return 'medium_light';
+    return 'medium_classic';
+  }
+
+  /* Fills the editor from label details: { name, roaster, origin, process, roast, notes, tempC, similar } */
+  function applyLabelDetails(d, source) {
+    const title = [d.name || d.origin, d.roaster].map(part => (part || '').trim()).filter(Boolean).join(' · ');
+    if (title) document.getElementById('coffeeName').value = title.slice(0, 50);
+
+    const similar = getBuiltInCoffeeKeys().includes(d.similar) ? d.similar : guessSimilarProfile(d);
+    document.getElementById('coffeeBase').value = similar;
+    const tempC = Number.isFinite(d.tempC) && d.tempC >= 80 && d.tempC <= 100 ? d.tempC : coffeeData[similar].temp;
+    document.getElementById('coffeeTemp').value = formatTempValue(tempC);
+
+    const roastText = d.roast ? `${d.roast.charAt(0).toUpperCase()}${d.roast.slice(1)} roast` : '';
+    const details = [d.origin, d.process, roastText].map(part => (part || '').trim()).filter(Boolean).join(' · ');
+    const notes = [(d.notes || '').trim().replace(/\.$/, ''), details].filter(Boolean).join('. ');
+    if (notes) document.getElementById('coffeeNotes').value = notes.slice(0, 300);
+
+    updateCoffeeGrindHint();
+    const from = source === 'photo' ? 'your photo' : 'the pasted text';
+    showScanStatus(title
+      ? `Filled in from ${from}. Check the details, then tap Save Coffee.`
+      : `Filled in what I could from ${from}, but couldn't find a name. Add one, check the rest, then tap Save Coffee.`, 'ok');
+  }
+
+  function togglePastePanel() {
+    triggerHapticFeedback();
+    const panel = document.getElementById('pastePanel');
+    const opening = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !opening);
+    panel.classList.toggle('flex', opening);
+    if (opening) document.getElementById('pasteText').focus();
+  }
+
+  /* Pulls label details out of copied text, e.g. from iPhone Live Text. Heuristic: works best on clear labels. */
+  function parseLabelText(text) {
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const all = lines.join('\n');
+    const lower = all.toLowerCase();
+
+    const notesMatch = all.match(/(?:tasting notes|flavou?r notes|cup notes|notes|tastes? like|flavou?rs?|in the cup)\s*[:\-–]?\s*(.+)/i);
+    const processMatch = lower.match(/\b(pulped natural|semi-washed|wet-hulled|carbonic maceration|anaerobic|washed|natural|honey)\b/);
+    const roastMatch = lower.match(/\b(light|medium[- ]light|medium[- ]dark|medium|dark)\s+roast/) ||
+      lower.match(/roast(?:\s+level)?\s*[:\-–]?\s*(light|medium[- ]light|medium[- ]dark|medium|dark)\b/);
+    const roast = roastMatch ? roastMatch[1].replace(' ', '-') : /\bfilter\b/.test(lower) ? 'light' : /\bespresso\b/.test(lower) ? 'medium-dark' : '';
+    const origin = COFFEE_ORIGINS.find(country => lower.includes(country.toLowerCase())) || '';
+    const celsius = all.match(/\b(\d{2}(?:\.\d)?)\s*°\s*C\b/i);
+    const fahrenheit = all.match(/\b(\d{3})\s*°\s*F\b/i);
+    const tempC = celsius ? parseFloat(celsius[1]) : fahrenheit ? (parseFloat(fahrenheit[1]) - 32) * 5 / 9 : NaN;
+    // Name and roaster: short lines that aren't one of the details above. Bags usually print the roaster first.
+    const isDetail = line => /[:]|roast|notes|process|altitude|elevation|masl|variet|weight|\d{2,}/i.test(line) ||
+      (origin && line.toLowerCase().includes(origin.toLowerCase()));
+    const titleCase = text => text.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    const tidy = line => (line && line === line.toUpperCase() ? titleCase(line) : line || '');
+    const candidates = lines.filter(line => !isDetail(line) && line.length <= 40);
+    const name = tidy(candidates.length > 1 ? candidates[1] : candidates[0]);
+    const roaster = candidates.length > 1 ? tidy(candidates[0]) : '';
+    const process = processMatch ? titleCase(processMatch[1]) : '';
+
+    return { name, roaster, origin, process, roast, notes: notesMatch ? notesMatch[1].trim() : '', tempC };
+  }
+
+  function fillFromPastedText() {
+    triggerHapticFeedback();
+    const text = document.getElementById('pasteText').value;
+    if (!text.trim()) {
+      showScanStatus('Paste the text from the bag first.', 'error');
+      return;
+    }
+    applyLabelDetails(parseLabelText(text), 'text');
   }
 
   /* ---------- Display settings: temperature unit, text size, motion ---------- */
