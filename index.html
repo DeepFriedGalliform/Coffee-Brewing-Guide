@@ -445,6 +445,8 @@
         <button type="button" onclick="dismissIosTip()" class="self-end text-[11px] font-extrabold text-amber-300 hover:text-amber-200 px-2 py-1 active:scale-95">Got it</button>
       </div>
 
+      <p id="prepCapacityNote" role="note" class="hidden bg-amber-500/10 border border-amber-400/40 rounded-2xl px-3 py-2.5 text-[11px] text-amber-100 leading-relaxed"></p>
+
       <div id="prepUsualBanner" class="hidden bg-bronze/10 border border-bronze/40 rounded-2xl px-3 py-2.5 flex-col gap-1">
         <p id="prepUsualText" class="text-[11px] text-slate-200 leading-relaxed"></p>
         <button type="button" id="btnUseSetup" onclick="useSetupInsteadOfUsual()" class="self-start text-[11px] font-bold text-bronze hover:text-white underline underline-offset-2 py-1"></button>
@@ -626,7 +628,7 @@
                 <svg class="w-full h-full overflow-visible filter drop-shadow-[0_8px_12px_rgba(0,0,0,0.6)]" viewBox="0 0 160 140">
                   <defs>
                     <clipPath id="dripperClip">
-                      <polygon points="25,20 135,20 90,110 70,110" />
+                      <polygon id="brewerClipShape" points="25,20 135,20 90,110 70,110" />
                     </clipPath>
                     <linearGradient id="waterDepthGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stop-color="#38BDF8" />
@@ -640,10 +642,16 @@
                   </g>
 
                   <!-- Outer Conical Dripper Outline -->
-                  <polygon points="22,18 138,18 92,112 68,112" fill="none" stroke="#D4A373" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+                  <polygon id="brewerOutline" points="22,18 138,18 92,112 68,112" fill="none" stroke="#D4A373" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+
+                  <!-- AeroPress plunger, shown while pressing -->
+                  <g id="brewerPlunger" style="display: none">
+                    <rect x="76" y="-34" width="8" height="34" rx="2" fill="#D4A373" />
+                    <rect x="52" y="-4" width="56" height="8" rx="3" fill="#D4A373" />
+                  </g>
                   
                   <!-- Dripper Stand Base Bar -->
-                  <rect x="36" y="112" width="88" height="8" rx="4" fill="#D4A373" />
+                  <rect id="brewerBase" x="36" y="112" width="88" height="8" rx="4" fill="#D4A373" />
                 </svg>
 
                 <!-- Center Cumulative Target Weight Badge -->
@@ -860,6 +868,96 @@
         { label: "Steep", phaseName: "Immersion Steep", phase: "steep", valve: "closed", water: 1, time: [120, 180], flow: "Steeping", desc: "Add coffee on top. At {crust}, break crust with one gentle stir." },
         { label: "Valve Release", phaseName: "Final Drawdown", phase: "drawdown", valve: "open", water: 1, time: [60, 90], flow: "Drain", desc: "Place dripper on vessel to release brewed coffee." }
       ]
+    },
+
+    // Ready-made recipes. `base` is the method each one behaves like (prep, prompts, advice).
+    hoffmann_v60: {
+      name: 'Hoffmann V60',
+      base: 'v60',
+      grindOffset: 0,
+      steps: [
+        { label: "Bloom Pour", phaseName: "Active Pour", phase: "pour", water: 0.2, time: [10, 15], pour: true, desc: "Pour to {water}g, then swirl gently so every ground is wet." },
+        { label: "Bloom Rest", phaseName: "Bloom Rest", phase: "bloom", water: 0.2, time: [35, 30], flow: "Resting", desc: "Let the coffee bloom." },
+        { label: "Second Pour", phaseName: "Active Pour", phase: "pour", water: 0.4, time: [15, 20], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.4, time: [10, 10], flow: "Resting", desc: "A short pause." },
+        { label: "Third Pour", phaseName: "Active Pour", phase: "pour", water: 0.6, time: [10, 15], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.6, time: [10, 10], flow: "Resting", desc: "A short pause." },
+        { label: "Fourth Pour", phaseName: "Active Pour", phase: "pour", water: 0.8, time: [10, 15], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.8, time: [10, 10], flow: "Resting", desc: "A short pause." },
+        { label: "Final Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [10, 15], pour: true, desc: "Pour to {water}g, then give the V60 a gentle swirl to flatten the bed." },
+        { label: "Drawdown", phaseName: "Final Drawdown", phase: "drawdown", water: 1, time: [60, 75], flow: "Drain", desc: "Let it drain. Aim to finish around 3:00." }
+      ]
+    },
+    kasuya_46: {
+      name: 'Kasuya 4:6',
+      base: 'v60',
+      grindOffset: 1.5,
+      steps: [
+        { label: "Pour 1", phaseName: "Active Pour", phase: "pour", water: 0.2, time: [10, 15], pour: true, desc: "Pour to {water}g. The first two pours (40%) set the taste: a smaller first pour is sweeter, a bigger one brighter." },
+        { label: "Rest", phaseName: "Rest", phase: "bloom", water: 0.2, time: [35, 30], flow: "Resting", desc: "Let it drain until the next pour." },
+        { label: "Pour 2", phaseName: "Active Pour", phase: "pour", water: 0.4, time: [10, 15], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Rest", phaseName: "Rest", phase: "bloom", water: 0.4, time: [35, 30], flow: "Resting", desc: "Let it drain until the next pour." },
+        { label: "Pour 3", phaseName: "Active Pour", phase: "pour", water: 0.6, time: [10, 15], pour: true, desc: "Pour to {water}g. The last three pours (60%) set the strength." },
+        { label: "Rest", phaseName: "Rest", phase: "bloom", water: 0.6, time: [35, 30], flow: "Resting", desc: "Let it drain until the next pour." },
+        { label: "Pour 4", phaseName: "Active Pour", phase: "pour", water: 0.8, time: [10, 15], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Rest", phaseName: "Rest", phase: "bloom", water: 0.8, time: [35, 30], flow: "Resting", desc: "Let it drain until the next pour." },
+        { label: "Pour 5", phaseName: "Active Pour", phase: "pour", water: 1, time: [10, 15], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Drawdown", phaseName: "Final Drawdown", phase: "drawdown", water: 1, time: [30, 40], flow: "Drain", desc: "Let it drain. Take the dripper off at about 3:30, even if it's still dripping." }
+      ]
+    },
+    kalita: {
+      name: 'Kalita Wave',
+      base: 'v60',
+      grindOffset: 0.3,
+      steps: [
+        { label: "Bloom Pour", phaseName: "Active Pour", phase: "pour", water: 0.2, time: [10, 15], pour: true, desc: "Pour to {water}g in a slow spiral." },
+        { label: "Bloom Rest", phaseName: "Bloom Rest", phase: "bloom", water: 0.2, time: [30, 30], flow: "Resting", desc: "Let the coffee bloom." },
+        { label: "Pulse 1", phaseName: "Active Pour", phase: "pour", water: 0.4, time: [15, 20], pour: true, desc: "Pour in small circles to {water}g, keeping off the filter's ridges." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.4, time: [10, 10], flow: "Resting", desc: "Let the level drop a little." },
+        { label: "Pulse 2", phaseName: "Active Pour", phase: "pour", water: 0.6, time: [15, 20], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.6, time: [10, 10], flow: "Resting", desc: "Let the level drop a little." },
+        { label: "Pulse 3", phaseName: "Active Pour", phase: "pour", water: 0.8, time: [15, 20], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.8, time: [10, 10], flow: "Resting", desc: "Let the level drop a little." },
+        { label: "Final Pulse", phaseName: "Active Pour", phase: "pour", water: 1, time: [15, 20], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Drawdown", phaseName: "Final Drawdown", phase: "drawdown", water: 1, time: [60, 80], flow: "Drain", desc: "Let it drain through the flat bed." }
+      ]
+    },
+    chemex: {
+      name: 'Chemex',
+      base: 'v60',
+      grindOffset: 1.0,
+      steps: [
+        { label: "Bloom Pour", phaseName: "Active Pour", phase: "pour", water: 0.15, time: [10, 15], pour: true, desc: "Pour to {water}g (about twice the coffee's weight) to bloom." },
+        { label: "Bloom Rest", phaseName: "Bloom Rest", phase: "bloom", water: 0.15, time: [35, 35], flow: "Resting", desc: "Let the coffee bloom." },
+        { label: "Main Pour", phaseName: "Active Pour", phase: "pour", water: 0.6, time: [30, 40], pour: true, desc: "Pour in slow spirals to {water}g at around {flow}." },
+        { label: "Pause", phaseName: "Pause", phase: "bloom", water: 0.6, time: [15, 15], flow: "Resting", desc: "Let the level drop a little." },
+        { label: "Final Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [30, 40], pour: true, desc: "Pour to {water}g at around {flow}." },
+        { label: "Drawdown", phaseName: "Final Drawdown", phase: "drawdown", water: 1, time: [110, 150], flow: "Drain", desc: "Let it drain through the thick filter." }
+      ]
+    },
+    aeropress: {
+      name: 'AeroPress',
+      grindOffset: -0.5,
+      maxWater: 250,
+      steps: [
+        { label: "Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [10, 15], pour: true, desc: "Pour all the water, {water}g, over the coffee." },
+        { label: "Steep", phaseName: "Immersion Steep", phase: "steep", water: 1, time: [120, 120], flow: "Steeping", desc: "Put the plunger in about 1 cm to stop it dripping, and let it steep." },
+        { label: "Swirl & Settle", phaseName: "Swirl & Settle", phase: "bloom", water: 1, time: [30, 30], flow: "Resting", desc: "Hold the AeroPress and swirl gently, then let it settle." },
+        { label: "Press", phaseName: "Press", phase: "drawdown", water: 1, time: [30, 40], flow: "Press", desc: "Press gently and steadily all the way down." }
+      ]
+    },
+    aeropress_inverted: {
+      name: 'AeroPress Inverted',
+      base: 'aeropress',
+      inverted: true,
+      grindOffset: -0.5,
+      maxWater: 250,
+      steps: [
+        { label: "Pour", phaseName: "Active Pour", phase: "pour", water: 1, time: [10, 15], pour: true, desc: "With the AeroPress upside down, pour all the water, {water}g, over the coffee." },
+        { label: "Stir & Steep", phaseName: "Immersion Steep", phase: "steep", water: 1, time: [90, 90], flow: "Steeping", desc: "Stir three times, fit the cap with a rinsed filter, and let it steep." },
+        { label: "Flip", phaseName: "Flip", phase: "bloom", water: 1, time: [15, 15], flow: "Flip", desc: "Carefully flip the AeroPress onto your mug." },
+        { label: "Press", phaseName: "Press", phase: "drawdown", water: 1, time: [30, 40], flow: "Press", desc: "Press gently and steadily all the way down." }
+      ]
     }
   };
 
@@ -894,7 +992,10 @@
      the method's offset, temp (°C, or null) overrides the coffee's water temperature, and each step is written like the
      built-in ones. They're added to RECIPES as "recipe_<id>". */
   const RECIPE_PREFIX = 'recipe_';
-  const BUILT_IN_METHODS = ['v60', 'switch_hybrid', 'switch_immersion', 'clever'];
+  // The order the Brew Method picker steps through (your own recipes come after these)
+  const BUILT_IN_METHODS = ['v60', 'hoffmann_v60', 'kasuya_46', 'kalita', 'chemex', 'switch_hybrid', 'switch_immersion', 'clever', 'aeropress', 'aeropress_inverted'];
+  // The methods a recipe can behave like (valve prompts, prep steps, wording); ready-made recipes name theirs as `base`
+  const METHOD_FAMILIES = ['v60', 'switch_hybrid', 'switch_immersion', 'clever', 'aeropress'];
   const RECIPE_PHASES = { pour: 'Pour', bloom: 'Rest', steep: 'Steep', drawdown: 'Drawdown' };
   const RECIPE_STEP_DEFAULTS = {
     pour: { phaseName: 'Active Pour', flow: null, desc: 'Pour to {water}g at around {flow}.' },
@@ -916,7 +1017,7 @@
 
   function isValidRecipe(r) {
     if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !/^[a-z0-9]{1,24}$/.test(r.id) ||
-        typeof r.name !== 'string' || !r.name.trim() || r.name.length > 40 || !BUILT_IN_METHODS.includes(r.base) ||
+        typeof r.name !== 'string' || !r.name.trim() || r.name.length > 40 || !METHOD_FAMILIES.includes(r.base) ||
         !Number.isFinite(r.grindOffset) || Math.abs(r.grindOffset) > 5 ||
         !(r.temp === null || (Number.isFinite(r.temp) && r.temp >= 60 && r.temp <= 100)) ||
         !Array.isArray(r.steps) || r.steps.length < 2 || r.steps.length > 15) return false;
@@ -1266,6 +1367,16 @@
     return parts.join(' ');
   }
 
+  /* AeroPress recipes finish by pressing; everything else drains */
+  function isPressMethod(method = currentMethod) {
+    return getMethodFamily(method) === 'aeropress';
+  }
+
+  /* "when it stops dripping", for "Tap Done …" */
+  function finishCue(method = currentMethod) {
+    return isPressMethod(method) ? 'when the plunger is all the way down' : 'when it stops dripping';
+  }
+
   /* Short spoken cue for the start of a step, e.g. "Close the valve. Steep Pour. Pour to 250 grams." */
   function getStepSpeech(index) {
     const s = activeSteps[index];
@@ -1279,6 +1390,7 @@
 
     if (s.pourTime > 0) return `${valveCue}${s.label}. Pour to ${s.water} grams.`;
     if (s.phase === 'drawdown') {
+      if (family === 'aeropress') return 'Press gently and steadily. Tap Done when the plunger is all the way down.';
       if (family === 'clever') return 'Place the dripper on your cup to drain. Tap Done when it stops dripping.';
       return `${valveCue}Drawdown. Tap Done when it stops dripping.`;
     }
@@ -1796,12 +1908,27 @@
 
     const step5Title = document.getElementById('prepStep5Title');
     const step5Desc = document.getElementById('prepStep5Desc');
-    if (getMethodFamily(currentMethod) === 'clever') {
+    const recipe = RECIPES[currentMethod] || RECIPES.v60;
+    const family = getMethodFamily(currentMethod);
+    if (family === 'aeropress' && recipe.inverted) {
+      step5Title.innerText = "Assemble Upside Down & Add Coffee";
+      step5Desc.innerText = "Stand the AeroPress upside down with the plunger just inside, add the ground coffee, and tare the scale to 0.0g.";
+    } else if (family === 'aeropress') {
+      step5Title.innerText = "Assemble on Your Mug & Add Coffee";
+      step5Desc.innerText = "Fit a rinsed paper filter, stand the AeroPress on your mug, add the ground coffee, and tare the scale to 0.0g.";
+    } else if (family === 'clever') {
       step5Title.innerText = "Weigh Water into Brewer First";
       step5Desc.innerText = `Place filter in Clever Dripper off the vessel, ensure valve is closed, and pour ${waterGrams}g water directly. Keep coffee separate.`;
     } else {
       step5Title.innerText = "Add Grounds & Flatten Bed";
       step5Desc.innerText = "Add ground coffee to filter, tap gently to level bed, and tare scale to 0.0g.";
+    }
+
+    const capacity = document.getElementById('prepCapacityNote');
+    const tooMuch = Number.isFinite(recipe.maxWater) && waterGrams > recipe.maxWater;
+    capacity.classList.toggle('hidden', !tooMuch);
+    if (tooMuch) {
+      capacity.innerText = `A standard ${recipe.name.replace(' Inverted', '')} holds about ${recipe.maxWater}g of water, less than the ${waterGrams}g set for this brew. Choose ${recipe.maxWater}g or less, or use an AeroPress XL.`;
     }
 
     renderPrepGrindNote();
@@ -2569,7 +2696,7 @@
     document.getElementById('resumeNote').innerText = brew.paused
       ? 'The app was closed while your brew was paused. Resume to carry on from here.'
       : brew.elapsed >= brew.total
-        ? 'The app was closed during the drawdown, and the timer has kept counting. Resume, then tap Done when it stops dripping.'
+        ? `The app was closed during the ${isPressMethod(brew.method) ? 'press' : 'drawdown'}, and the timer has kept counting. Resume, then tap Done ${finishCue(brew.method)}.`
         : 'The app was closed during your brew, and the timer has kept counting. Resume to pick up where you are.';
   }
 
@@ -2753,7 +2880,7 @@
   }
 
   function usesValve(base) {
-    return base !== 'v60';
+    return ['switch_hybrid', 'switch_immersion', 'clever'].includes(base);
   }
 
   function openRecipeEditor(key) {
@@ -2776,7 +2903,9 @@
       })
     };
     document.getElementById('recipeEditorTitle').innerText = key ? 'Edit Recipe' : 'New Recipe';
-    document.getElementById('recipeEditorBase').innerText = `Based on ${RECIPES[base].name}`;
+    document.getElementById('recipeEditorBase').innerText = key || source === RECIPES[base]
+      ? `Based on ${RECIPES[base].name}`
+      : `Copied from ${source.name}`;
     document.getElementById('recipeName').value = recipeDraft.name;
     document.getElementById('recipeTempLabel').innerText = `Water temp (°${tempUnit})`;
     document.getElementById('recipeTemp').value = recipeDraft.tempC === null ? '' : formatTempValue(recipeDraft.tempC);
@@ -3263,7 +3392,29 @@
 
       const pathData = `M ${leftX} ${targetY} C ${mid1X} ${waveY1}, ${mid2X} ${waveY2}, ${rightX} ${targetY} L ${rightX} ${bottomY} L ${leftX} ${bottomY} Z`;
       filterWaterPath.setAttribute('d', pathData);
+
+      // While pressing an AeroPress, the plunger rides down on top of the coffee
+      const plunger = document.getElementById('brewerPlunger');
+      const pressing = isPressMethod() && step.phase === 'drawdown';
+      plunger.style.display = pressing ? '' : 'none';
+      if (pressing) plunger.setAttribute('transform', `translate(0 ${Math.min(106, targetY) - 4})`);
     }
+  }
+
+  /* The ring view's brewer: a cone for drippers, a straight chamber for the AeroPress */
+  const BREWER_SHAPES = {
+    dripper: { clip: '25,20 135,20 90,110 70,110', outline: '22,18 138,18 92,112 68,112', baseX: 36, baseWidth: 88 },
+    press: { clip: '54,14 106,14 106,110 54,110', outline: '51,10 109,10 109,112 51,112', baseX: 42, baseWidth: 76 }
+  };
+
+  function setBrewerShape() {
+    const shape = BREWER_SHAPES[isPressMethod() ? 'press' : 'dripper'];
+    document.getElementById('brewerClipShape').setAttribute('points', shape.clip);
+    document.getElementById('brewerOutline').setAttribute('points', shape.outline);
+    const base = document.getElementById('brewerBase');
+    base.setAttribute('x', shape.baseX);
+    base.setAttribute('width', shape.baseWidth);
+    document.getElementById('brewerPlunger').style.display = 'none';
   }
 
   /* Draws one frame of the brew screen. Only the visible view is redrawn; chart data is always recorded. */
@@ -3283,7 +3434,7 @@
       overtimeAnnounced = true;
       playDistinctChime();
       triggerVibration([150, 100, 150]);
-      speak('Still draining? Tap Done when it stops dripping.');
+      speak(isPressMethod() ? 'Still pressing? Tap Done when the plunger is all the way down.' : 'Still draining? Tap Done when it stops dripping.');
     }
     updatePrimaryControl(stepState.stepIndex === activeSteps.length - 1);
 
@@ -3445,6 +3596,7 @@
   /* startAt and startPaused are used when resuming a brew after the app was closed */
   function startActiveBrewTimer(startAt = 0, startPaused = false) {
     switchScreenView('brewScreen');
+    setBrewerShape();
     generateTargetProfile();
     initChart();
     document.getElementById('liveOverviewStatsBar').innerHTML = brewStatsHTML(brewTotalDuration);
@@ -3541,15 +3693,15 @@
     const statusBubble = document.getElementById('unifiedStatusBubble');
 
     if (isOvertime) {
-      stepTitleHeader.innerText = "Still Draining?";
-      instruction.innerText = "Past the target time. Tap Done the moment it stops dripping.";
+      stepTitleHeader.innerText = isPressMethod() ? "Still Pressing?" : "Still Draining?";
+      instruction.innerText = `Past the target time. Tap Done ${finishCue()}.`;
       stepTitleHeader.className = "text-sm sm:text-base font-black tracking-wide uppercase text-amber-400 drop-shadow-sm";
       statusBubble.className = "w-full px-4 py-3 rounded-2xl border bg-amber-500/15 border-amber-400/60 shadow-depth-inner text-center flex flex-col items-center justify-center gap-1 transition-all duration-300 min-h-[85px]";
       return;
     }
 
     stepTitleHeader.innerText = step.phaseName;
-    instruction.innerText = stepIndex === activeSteps.length - 1 ? `${step.desc} Tap Done when it stops dripping.` : step.desc;
+    instruction.innerText = stepIndex === activeSteps.length - 1 ? `${step.desc} Tap Done ${finishCue()}.` : step.desc;
 
     if (isPouring) {
       stepTitleHeader.className = "text-sm sm:text-base font-black tracking-wide uppercase text-volvic drop-shadow-sm";
@@ -3685,6 +3837,8 @@
       diag.innerHTML = `If your brew tastes dry or astringent, your grind was slightly too fine. Go ${coarserOneStep} next time.`;
     } else if (family.startsWith('switch')) {
       diag.innerHTML = `If drawdown stalled during the valve-open phase, go ${coarserOneStep} to reduce fines migration.`;
+    } else if (family === 'aeropress') {
+      diag.innerHTML = `If the cup tastes bitter or pressing was hard work, go ${coarserOneStep} next time.`;
     } else {
       diag.innerHTML = `If the cup feels muddy or overly heavy, go ${coarserOneStep} next time.`;
     }
@@ -3698,6 +3852,13 @@
     const titleClass = "text-[11px] font-extrabold uppercase tracking-wider mb-1 flex items-center gap-1";
 
     renderGrindSave(null);
+    const press = isPressMethod();
+    if (drawdownSeconds === null && press) {
+      title.className = `${titleClass} text-amber-400`;
+      title.innerText = "⏱️ Hard to Press?";
+      advice.innerHTML = `If pressing took a lot of force, the grind was a little fine. For your next brew, go <strong>1–2 ${getGrinder().unit}s coarser</strong> on your ${getGrinder().name}. Tap <strong>Done</strong> when the plunger is all the way down next time to get advice based on your actual press.`;
+      return;
+    }
     if (drawdownSeconds === null) {
       title.className = `${titleClass} text-amber-400`;
       title.innerText = "⏱️ Drawdown / Brew Time Longer Than Expected?";
@@ -3713,17 +3874,21 @@
     const tolerance = Math.max(10, Math.round(target * 0.15));
     const steps = Math.abs(diff) > tolerance * 2 ? 2 : 1;
 
-    title.innerText = `⏱️ Drawdown ${formatTime(actual)} · Target ${formatTime(target)}`;
+    title.innerText = `⏱️ ${press ? 'Press' : 'Drawdown'} ${formatTime(actual)} · Target ${formatTime(target)}`;
     if (Math.abs(diff) <= tolerance) {
       title.className = `${titleClass} text-emerald-400`;
       advice.innerHTML = `Right on target (${diff >= 0 ? '+' : '−'}${Math.abs(diff)}s). Keep the same setting (<strong>${describeGrind(getGrindSetting(selectedCoffeeKey))}</strong> on your ${getGrinder().name}) next time.`;
     } else if (diff > 0) {
       title.className = `${titleClass} text-amber-400`;
-      advice.innerHTML = `<strong>${diff}s slower</strong> than the recipe. A slow drawdown usually means the grind was a little fine or fines clogged the filter, which can taste bitter or dry. Go ${grindAdjustmentHTML(steps, true)} next time.`;
+      advice.innerHTML = press
+        ? `<strong>${diff}s slower</strong> than the recipe. A slow, hard press usually means the grind was a little fine, which can taste bitter. Go ${grindAdjustmentHTML(steps, true)} next time.`
+        : `<strong>${diff}s slower</strong> than the recipe. A slow drawdown usually means the grind was a little fine or fines clogged the filter, which can taste bitter or dry. Go ${grindAdjustmentHTML(steps, true)} next time.`;
       renderGrindSave(getGrindTarget(steps, true));
     } else {
       title.className = `${titleClass} text-amber-400`;
-      advice.innerHTML = `<strong>${-diff}s faster</strong> than the recipe. A quick drawdown usually means the grind was a little coarse, which can taste sour or thin. Go ${grindAdjustmentHTML(steps, false)} next time.`;
+      advice.innerHTML = press
+        ? `<strong>${-diff}s faster</strong> than the recipe. A quick, easy press usually means the grind was a little coarse, which can taste sour or thin. Go ${grindAdjustmentHTML(steps, false)} next time.`
+        : `<strong>${-diff}s faster</strong> than the recipe. A quick drawdown usually means the grind was a little coarse, which can taste sour or thin. Go ${grindAdjustmentHTML(steps, false)} next time.`;
       renderGrindSave(getGrindTarget(steps, false));
     }
   }

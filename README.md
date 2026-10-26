@@ -18,7 +18,7 @@
 ## Features
 
 ### Brewing
-- **Four brew methods**: Hario V60, Hario Switch (hybrid), Hario Switch (full immersion) and Clever Dripper. Step through them (and your own recipes) with the **‹ ›** buttons or by swiping on the Brew Method picker. The Coffee Type picker at the top of the coffee list works the same way.
+- **Ten brewing recipes**: Hario V60, Hoffmann V60 (James Hoffmann's one-cup method), Kasuya 4:6 (Tetsu Kasuya's method), Kalita Wave, Chemex, Hario Switch (hybrid and full immersion), Clever Dripper, and AeroPress (standard and inverted). Step through them (and your own recipes) with the **‹ ›** buttons or by swiping on the Brew Method picker. The Coffee Type picker at the top of the coffee list works the same way. The AeroPress has its own prep steps, a plunger in the brew view, press-based advice, and a warning if the brew is bigger than it holds.
 - **Your own recipes**: tap **+ Recipe** at the end of the Brew Method row to copy the selected method, then rename it and change its steps: each step's type (pour, rest, steep, drawdown), pour target, times for 250 g and 500 g, and the Switch/Clever valve. You can also set its own water temperature and make it grind finer or coarser. Your recipes join the methods in the Brew Method picker; when one is selected, tap its name (✎) to edit or delete it.
 - **Any dose, water and ratio**: 8–40 g of coffee and 100–800 g of water (default 15 g / 250 g, 1:16.7).
   - Water moves in 5 g steps and the ratio follows. The ratio moves in 0.5 steps and the water follows, always landing on a multiple of 5 g. Changing the dose keeps your ratio.
@@ -84,6 +84,18 @@ Everything the app remembers is stored only on your device, in the browser's loc
 4. **Drawdown**: tap **Done** as soon as the coffee stops dripping.
 5. **Finish**: read the tasting notes and the grind advice, and tap **Use … next time** to keep it.
 
+## Tests
+
+Browser tests in `tests/` check the recipes, setup screen, brewing, your own coffees and recipes, backups and offline use, on a phone-sized screen. GitHub runs them on every push and pull request (`.github/workflows/tests.yml`), and the same check fails if `styles.css` or `vendor/` weren't rebuilt after a change.
+
+To run them yourself (needs [Node.js](https://nodejs.org/) and Python 3):
+
+```sh
+npm install
+npx playwright install chromium   # first time only
+npm test
+```
+
 ## Hosting on GitHub Pages
 
 The app is a static site. Everything it needs (including the built `styles.css` and the `vendor/` files) is committed, so GitHub Pages serves it straight from the repo with no build step.
@@ -105,6 +117,8 @@ tailwind.config.js     Tailwind theme (app colours and shadows)
 package.json           Build scripts for styles.css
 manifest.webmanifest   Web app manifest (name, colours, icons) for "Add to Home Screen"
 sw.js                  Service worker that caches the app for offline use
+tests/                 Browser tests (Playwright); playwright.config.js sets them up
+.github/workflows/     Runs the tests on GitHub
 vendor/                Chart.js and the Inter font (latin subset), with their licences
 scripts/vendor.js      Copies those files from node_modules into vendor/ (npm run vendor)
 icons/                 App icon (bean, dripper and cup logo): SVG source plus PNG sizes for each platform
@@ -140,7 +154,7 @@ Commit the updated files in `vendor/`.
 Everything lives near the top of the `<script>` in `index.html`:
 
 - **Coffee profiles** (`coffeeData`): each entry has a `category` (`standard`, `pact` or `regional`), display `name`, water `temp` in °C, tasting `notes` and base grind `ode`, on the Fellow Ode Gen 2 dial for a 250 g V60. Coffees added in the app are stored the same way and appear under `mine`.
-- **Recipes** (`RECIPES`): one entry per brew method, with its `grindOffset` (V60 0, Switch hybrid +0.2, full immersion and Clever +0.5) and its steps. Each step gives:
+- **Recipes** (`RECIPES`): one entry per recipe, with its `grindOffset` (V60 0, Switch hybrid +0.2, full immersion and Clever +0.5, Chemex +1.0, Kasuya 4:6 +1.5, AeroPress −0.5) and its steps. Ready-made recipes name the method they behave like as `base` (for prep steps, valve prompts and advice), and the AeroPress sets a `maxWater`. Add a recipe to `BUILT_IN_METHODS` to put it in the picker. Each step gives:
   - `water`: the cumulative target as a fraction of the total (0.2 = 20%);
   - `time`: `[seconds at 250 g, seconds at 500 g]`. Other sizes are interpolated, and extrapolated a little beyond that range;
   - `pour: true` if the whole step is pouring. The flow rate is then calculated;
